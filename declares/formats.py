@@ -30,6 +30,14 @@ class Either(Format):
         return (self.input.__out__,)
 
 
+class Each(Format):
+    def __init__(self, inner):
+        self.inner = inner
+
+    def __bind__(self, input):
+        self.input = input
+
+
 class Re(Format):
     def __init__(self, exp):
         import re
@@ -49,8 +57,9 @@ class Re(Format):
 
 
 class Sep(Format):
-    def __init__(self, sep=','):
+    def __init__(self, sep=',', limit=0):
         self.sep = sep
+        self.limit = limit
 
     def __bind__(self, input):
         assert isinstance(self.sep, input.__out__)

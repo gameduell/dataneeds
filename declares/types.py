@@ -5,11 +5,19 @@ class Type(Format):
     def __add__(self, other):
         return Cons(self, other)
 
+
+    def __and__(self, other):
+        return self
+
+
     def __or__(self, other):
         return Union(self, other)
 
     def __invert__(self):
         return Optional(self)
+
+    def __bind__(self, input):
+        self.input = input
 
 
 class Any(Type):

@@ -39,8 +39,8 @@ class SepImpl(implement=dc.Sep):
 
 
 class RecordTupleImpl:
-    __in__ = Tuples
-    __out__ = Records
+    __in__ = dc.Tuples
+    __out__ = dc.Records
 
     def __init__(self, rec: dc.Record):
         self.rec = rec
@@ -56,8 +56,8 @@ class RecordTupleImpl:
 
 
 class JsonDictsImpl:
-    __in__ = Strings
-    __out__ = Dicts
+    __in__ = dc.Strings
+    __out__ = dc.Dicts
 
     def __init__(self):
         self.names = set()
@@ -79,8 +79,8 @@ class JsonDictsImpl:
 
 
 class RecordDictImpl:
-    __in__ = Dicts
-    __out__ = Records
+    __in__ = dc.Dicts
+    __out__ = dc.Records
 
     def __init__(self, rec: dc.Record):
         self.rec = rec
