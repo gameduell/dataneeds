@@ -1,10 +1,10 @@
-# Declares Data
+# Declarative Data
 
-Decalre is about a declerative approch to data processing. Instead of describing exactly **how** to load and process your data, you define a descriptive repository of your data sources and then only have to describe **what** data you need to load. Exporting of data can be handled the same way by Declares, using definitions of data sinks.
+This is a declarative approch to data processing: Instead of describing exactly **how** to load and process your data, you declare **what** data you have and **what** you are interrested in.
 
-Moreover Declare can apply many transformations, like references to other objects in different sources or automatic accomulations when required for your data request.
+That why you can load and store data from and to your system without caring about every indivdual step, with many transformations applyed automatically: references to other objects in different sources are resolved or accomulations are clalculated on the fly when required for your data request.
 
-Finally, a pool of computatinal ressources can be allocated to Declare, making Declare a distributed, scalable data processing tool.
+Finally, a pool of computatinal ressources can be managed by declarative, making it a distributed scalable data processing tool.
 
 Meta-classes inside Declare:
 
@@ -22,7 +22,7 @@ Meta-classes inside Declare:
 
 Data have types, allowing to do different things with them. For example you can add hours to a timestamp, but not to an integer. Types keep track of this.
 
-There are primitive types in Declares, like String or Int, but also more advanced types like Timestamps, Tuples or Categoricals. And you can define your own Types.
+There are primitive types in Declarative, like String or Int, but also more advanced types like Timestamps, Tuples or Categoricals. And you can define your own Types.
 
 ## Entitis
 
@@ -34,7 +34,7 @@ To combine different information, entities should be referrable, identified by k
 
 Normally data is stored as records, grouping together related information.
 
-In Declares records are defined referencing fields of entites and other records.
+In Declarative records are defined referencing fields of entites and other records.
 
 / There's an Event class that is both Entity and the primitive record of itself. /
 

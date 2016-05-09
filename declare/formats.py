@@ -1,21 +1,13 @@
-class Format:
+from .binds import Binds
+
+
+class Format(Binds):
     def __bind__(self, input):
         return NotImplemented
 
     @property
     def __out__(self):
         return ()
-
-    def __rrshift__(self, other):
-        print('{} >> {} (rr)'.format(other, self))
-        # other >> self
-        res = self.__bind__(other)
-        return self if res is None else res
-
-    def __rshift__(self, other):
-        # self >> other
-        print('{} >> {} (rr)'.format(self, other))
-        return NotImplemented
 
 
 class Either(Format):
@@ -64,6 +56,9 @@ class Sep(Format):
     def __bind__(self, input):
         assert isinstance(self.sep, input.__out__)
         self.input = input
+
+    def __str__(self):
+        return 'Sep({sep!r}, {limit})'.format(sep=self.sep, limit=self.limit)
 
     @property
     def __out__(self):

@@ -2,3 +2,4 @@ __pycache__
 *.sw?
 .ropeproject
 *.egg-info
+.cache

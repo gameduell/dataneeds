@@ -1,34 +1,13 @@
 import declares as dc
 
 
-class Node(dc.Entity):
-    def __init__(self):
-        super().__init__()
-        self.id = dc.Number()
-        self.label = dc.String()
-
-    def __connect__(self):
-        self.edges = dc.Set(Edge())
-
-
-class Edge(dc.Entity):
-    def __init__(self):
-        super().__init__()
-        self.id = dc.Number()
-        self.weight = dc.Number()
-
-    def __connect__(self):
-        self.source = Node()
-        self.target = Node()
-
-
 # Node List Format
 # id,label,edge-ids...
 # 0,A,0,1
 # 1,B,2,3,4
 # 2,C,
 
-class NodeListFormat:
+class NodeListFormat(dc.Source):
     N = Node()
 
     (dc.Files("*.nlf") >>
@@ -46,7 +25,7 @@ class NodeListFormat:
 # 3,1.,1,1
 # 4,.4,1,2
 
-class EdgeListFormat:
+class EdgeListFormat(dc.Source):
     E = Edge()
 
     (dc.Files("*.elf") >>
