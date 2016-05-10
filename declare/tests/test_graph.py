@@ -7,8 +7,8 @@ class Node(dc.Entity):
     id = dc.Number()
     label = dc.String()
 
-    @dc.relate(0, ...)
-    def edges():
+    @dc.relate
+    def edges(lower=0, upper=...):
         return Edge()
 
 
@@ -16,13 +16,64 @@ class Edge(dc.Entity):
     id = dc.Number()
     weight = dc.Number()
 
-    @dc.relate(1)
+    @dc.relate
     def source():
         return Node()
 
-    @dc.relate(1)
+    @dc.relate
     def target():
         return Node()
+
+
+# Node List Format
+# id,label,edge-ids...
+# 0,A,0,1
+# 1,B,2,3,4
+# 2,C,
+
+class NodeListFormat(dc.Source):
+    N = Node()
+
+    (dc.Files("tests/*.nlf") >>
+     dc.Sep(',', 3) >>
+     dc.Cons(N.id,
+             N.label,
+             dc.Sep(',') >> dc.Each(N.edges.id)))
+
+
+# Edge List Format
+# id,weight,source,target
+# 0,.3,0,1
+# 1,.2,0,2
+# 2,.2,1,0
+# 3,1.,1,1
+# 4,.4,1,2
+
+class EdgeListFormat(dc.Source):
+    E = Edge()
+
+    (dc.Files("tests/*.elf") >>
+     dc.Sep(',') >>
+     dc.Cons(E.id,
+             E.weight,
+             E.source.id,
+             E.target.id))
+
+
+# Node Edge Format
+# node-id,laebl,edge-id:weight:target-id,...
+# 0,A,0:.3:1,1:.2:2
+# 1,B,2:.2:0,3:1.:1,4:.4:2
+# 2,C,
+
+class NodeEdgeFormat:
+    N = Node()
+    E = Edge()
+
+    (dc.Files("tests/*.nef") >>
+     dc.Sep(',', 3) >>
+     (N.id & E.source.id + N.label + dc.Sep(',') >> dc.Each(
+         dc.Sep('.') >> (E.id & N.edges.id + E.weight + E.target.id))))
 
 
 def test_entities():
@@ -43,47 +94,15 @@ def test_entities():
     assert isinstance(e.source.entity, Node)  # XXX Relation
     assert isinstance(e.target.entity, Node)  # XXX Relation
 
+    assert "test_graph" in repr(n.id)
     assert "Number" in repr(n.id)
     assert "Node" in repr(n.id)
 
-
-# Node List Format
-# id,label,edge-ids...
-# 0,A,0,1
-# 1,B,2,3,4
-# 2,C,
-
-class NodeListFormat(dc.Source):
-    N = Node()
-
-    (dc.Files("*.nlf") >>
-     dc.Sep(',', 3) >>
-     dc.Cons(N.id,
-             N.label,
-             dc.Sep(',') >> dc.Each(N.edges.id)))
-
-
-# Edge List Format
-# id,weight,source,target
-# 0,.3,0,1
-# 1,.2,0,2
-# 2,.2,1,0
-# 3,1.,1,1
-# 4,.4,1,2
-
-class EdgeListFormat(dc.Source):
-    E = Edge()
-
-    (dc.Files("*.elf") >>
-     dc.Sep(',') >>
-     dc.Cons(E.id,
-             E.weight,
-             E.source.id,
-             E.target.id))
+    assert "test_graph.Node" in repr(n.edges.id)
+    assert "test_graph.Edge.id" in repr(n.edges.id)
 
 
 def test_binds():
-
     assert Node.__bindings__ is not Edge.__bindings__
     assert Node().__bindings__ is Node().__bindings__
 
@@ -92,24 +111,19 @@ def test_binds():
 
 
 def test_resolve():
-    dc.resolve(Node)
-    dc.resolve(Edge)
+    nra, nrb = dc.resolve(Node)
 
+    assert isinstance(nra, Node)
+    assert len(nra.inputs) == 3
 
-# Node Edge Format
-# node-id,laebl,edge-id:weight:target-id,...
-# 0,A,0:.3:1,1:.2:2
-# 1,B,2:.2:0,3:1.:1,4:.4:2
-# 2,C,
+    assert nra.id in nra.inputs
+    assert nra.label in nra.inputs
+    assert nra.edges.id in nra.inputs
+    assert isinstance(nra.id.input, dc.Cons)
+    assert nra.id.input == nra.label.input
 
-class NodeEdgeFormat:
-    N = Node()
-    E = Edge()
-    (dc.Files("*.nef") >>
-     dc.Sep(',', 3) >>
-     dc.Cons(dc.Both(N.id, E.source),
-             N.label,
-             dc.Sep(',') >> dc.Each(
-                  dc.Sep('.') >> dc.Cons(dc.Both(E.id, N.edges.id),
-                                         E.weight,
-                                         E.target))))
+    assert isinstance(nra.edges.id.input, dc.Each)
+    assert isinstance(nra.edges.id.input.input, dc.Sep)
+    assert nra.id.input == nra.edges.id.input.input.input
+
+    assert isinstance(nra.id.input.input, dc.Sep)

@@ -1,55 +1,21 @@
 from .binds import Binds
-from .entity import Entity
 
-
-class OwnedAttribute:
-    """An attribute of an entity defined with a Typ."""
-
-    def __init__(self, typ, owner):
-        self.typ = typ
-        self.owner = owner
-
-    def __str__(self):
-        return "{typ}".format(typ=self.typ)
-
-    def __repr__(self):
-        return "{typ!r} attr of {owner}".format(typ=self.typ,
-                                                owner=self.owner)
-
-
-class InstanceAttribute(Binds):
-    """An attribute of an entity instance defined with a Typ."""
-
-    def __init__(self, typ, entity):
-        self.typ = typ
-        self.entity = entity
-
-    def __str__(self):
-        return "{typ}".format(typ=self.typ)
-
-    def __repr__(self):
-        return "{typ!r} instance of {entity}".format(typ=self.typ,
-                                                     entity=self.entity)
-
-    def __bind__(self, input):
-        print('bind', repr(self))
-        self.input = input
-        self.entity.__bind__(self)
+import weakref
 
 
 class Type(Binds):
     def __init__(self):
-        self.input = None
-        self.entity = None
+        super().__init__()
+        self.__attrs__ = weakref.WeakKeyDictionary()
 
     def __add__(self, other):
         return Cons(self, other)
 
     def __and__(self, other):
-        return self
+        return Both(self, other)
 
     def __or__(self, other):
-        return Union(self, other)
+        return Either(self, other)
 
     def __invert__(self):
         return Optional(self)
@@ -65,11 +31,48 @@ class Type(Binds):
 
     def __get__(self, instance, owner):
         if instance is None:
-            if issubclass(owner, Entity):
-                return OwnedAttribute(self, owner)
+            return OwnedAttribute(self, owner)
         else:
-            if isinstance(instance, Entity):
-                return InstanceAttribute(self, instance)
+            try:
+                return self.__attrs__[instance]
+            except KeyError:
+                attr = InstanceAttribute(self, instance)
+                self.__attrs__[instance] = attr
+                return attr
+
+
+class OwnedAttribute:
+    """An attribute of an entity class defined with a Type."""
+
+    def __init__(self, typ, owner):
+        self.typ = typ
+        self.owner = owner
+
+    def __str__(self):
+        return "{typ}".format(typ=self.typ)
+
+    def __repr__(self):
+        return "{typ!r} attr of {owner!r}".format(typ=self.typ,
+                                                  owner=self.owner)
+
+
+class InstanceAttribute(Type, Binds):
+    """An attribute of an entity instance defined with a Type."""
+
+    def __init__(self, typ, instance):
+        self.typ = typ
+        self.instance = instance
+
+    def __str__(self):
+        return "{typ}".format(typ=self.typ)
+
+    def __repr__(self):
+        return "{typ!r} attr of a {instance!r}".format(typ=self.typ,
+                                                       instance=self.instance)
+
+    def __bind__(self, input):
+        self.input = input
+        self >> self.instance
 
 
 class Any(Type):
@@ -94,7 +97,7 @@ class Both(Type):
     def __bind__(self, input):
         self.input = input
         for typ in self.types:
-            typ.__bind__(input)
+            input >> typ
 
 
 class Cons(Type):
@@ -106,7 +109,7 @@ class Cons(Type):
         if isinstance(other, Cons):
             return Cons(*(self.types + other.types))
         else:
-            return Cons(*(self.types + [other]))
+            return Cons(*(self.types + (other,)))
 
     def __radd__(self, other):
         if isinstance(other, Cons):
@@ -115,27 +118,32 @@ class Cons(Type):
             return Cons(other, *self.types)
 
     def __bind__(self, input):
+        self.input = input
         for typ in self.types:
-            # XXX we should bind inner types to something else ...
-            typ.__bind__(input)
+            self >> typ
 
 
-class Union(Type):
+class Either(Type):
     def __init__(self, *types):
         super().__init__()
         self.types = types
 
     def __or__(self, other):
-        if isinstance(other, Union):
-            return Union(*(self.types + other.types))
+        if isinstance(other, Either):
+            return Either(*(self.types + other.types))
         else:
-            return Union(*(self.types + [other]))
+            return Either(*(self.types + [other]))
 
     def __ror__(self, other):
-        if isinstance(other, Union):
-            return Union(*(other.types + self.types))
+        if isinstance(other, Either):
+            return Either(*(other.types + self.types))
         else:
-            return Union(other, *self.types)
+            return Either(other, *self.types)
+
+    def __bind__(self, input):
+        self.input = input
+        for typ in self.types:
+            self >> typ
 
 
 class Number(Type):

@@ -16,6 +16,8 @@ class Either(Format):
 
     def __bind__(self, input):
         self.input = input
+        for fmt in self.formats:
+            self >> fmt
 
     @property
     def __out__(self):
@@ -25,9 +27,11 @@ class Either(Format):
 class Each(Format):
     def __init__(self, inner):
         self.inner = inner
+        self.input = None
 
     def __bind__(self, input):
         self.input = input
+        self >> self.inner
 
 
 class Re(Format):
@@ -36,7 +40,7 @@ class Re(Format):
         self.re = re.compile(exp)
 
     def __bind__(self, input):
-        assert input.__out__ == str
+        # assert input.__out__ == str
         self.input = input
 
     @property
@@ -54,7 +58,7 @@ class Sep(Format):
         self.limit = limit
 
     def __bind__(self, input):
-        assert isinstance(self.sep, input.__out__)
+        # assert isinstance(self.sep, input.__out__)
         self.input = input
 
     def __str__(self):
@@ -67,7 +71,8 @@ class Sep(Format):
 
 class Json(Format):
     def __bind__(self, input):
-        assert issubclass(input.__out__, str)
+        # assert issubclass(input.__out__, str)
+        self.input = input
 
     @property
     def __out__(self):
