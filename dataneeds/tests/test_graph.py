@@ -79,6 +79,7 @@ def test_request(graph):
         N.id
         N.label
         N.edges.id
+
     assert len(N.items) == 3
 
     with need.request(graph.Edge()) as E:
@@ -86,11 +87,13 @@ def test_request(graph):
         E.weight
         E.source.label
         E.target.label
+
     assert len(E.items) == 4
 
     with need.request(graph.Node()) as N:
         N.label
         sum(N.edges.weight)
+
     assert len(N.items) == 2
 
 
