@@ -50,10 +50,10 @@ For example if you have a timestamp, you can represent in many ways, a unix time
 
 - **attributes** to **type instances**
 
-  ```
+  ```python
   class AStruct(Struct):
-   attr1 = AType()
-   attr2 = OtherType()
+    attr1 = AType()
+    attr2 = OtherType()
   ```
 
 ## Entity Definition
@@ -61,16 +61,17 @@ For example if you have a timestamp, you can represent in many ways, a unix time
 - **attributes** with **type instances**
 - **references** to other **entity instances**
 
-  ```
+  ```python
   class AEntity(Entity):
-   attr1 = AType()
-   attr2 = OtherType()
-   attr3 = AStruct()
-   ...
-   ref1 = OtherEntity()
-   ref2 = YetAnotherEntity()
-   ...
-   # TODO Cardinalities
+    attr1 = AType()
+    attr2 = OtherType()
+    attr3 = AStruct()
+    ...
+    ref1 = OtherEntity()
+    @relate
+    def ref2(lower=1, upper=...)
+      return YetAnotherEntity()
+    ...
   ```
 
 ## Record Definition
@@ -79,7 +80,7 @@ For example if you have a timestamp, you can represent in many ways, a unix time
 - **inner** defines with **type instances** to other **record instances**
 - **references** as **keys of entity classes**
 
-```
+```python
 class ARecord(Record):
     attr1 = AEntity.attr1
     attr2 = AEntity.attr2
@@ -100,7 +101,7 @@ class BRecord(ARecord):
 
 - define **entity** and naive **record** the same time.
 
-```
+```python
 class AEvent(Record, Entity):
     attr1 = AType()
     attr2 = OneFormat() >> OtherType()
@@ -116,7 +117,7 @@ class AEvent(Record, Entity):
 
 - **format record DAG**
 
-  ```
+  ```python
   class AInput:
    (Files(...)
     >> Sep(',')
@@ -127,7 +128,7 @@ class AEvent(Record, Entity):
 
 Were starting with the Format Definition:
 
-```
+```python
 (Files(...)
  >> Sep(',')
  >> ARecord())
