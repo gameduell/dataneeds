@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "declarative",
+    name = "dataneeds",
     version = "0.1",
     packages = find_packages(),
     scripts = [],
@@ -12,7 +12,7 @@ setup(
     # metadata for upload to PyPI
     author = "wabu",
     author_email = "wabu@fooserv.net",
-    description = "declarative approch to your data",
+    description = "declarative approch to your data needs",
     license = "MIT",
     keywords = "declarative python data dask",
     url = "https://github.com/gameduell/declares",

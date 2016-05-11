@@ -72,8 +72,8 @@ class NodeEdgeFormat:
 
     (dc.Files("tests/*.nef") >>
      dc.Sep(',', 3) >>
-     (N.id & E.source.id + N.label + dc.Sep(',') >> dc.Each(
-         dc.Sep('.') >> (E.id & N.edges.id + E.weight + E.target.id))))
+     ((N.id & E.source.id) + N.label + dc.Sep(',') >> dc.Each(
+         dc.Sep('.') >> ((E.id & N.edges.id) + E.weight + E.target.id))))
 
 
 def test_entities():
@@ -109,11 +109,12 @@ def test_binds():
     assert len(Node.__bindings__) == 2
     assert len(Edge.__bindings__) == 2
 
-
-def test_resolve():
-    nra, nrb = dc.resolve(Node)
+    nra, nrb = Node.__bindings__
 
     assert isinstance(nra, Node)
+    assert isinstance(nrb, Node)
+    assert nra != nrb
+    assert len(nrb.inputs) == 3
     assert len(nra.inputs) == 3
 
     assert nra.id in nra.inputs
@@ -127,3 +128,32 @@ def test_resolve():
     assert nra.id.input == nra.edges.id.input.input.input
 
     assert isinstance(nra.id.input.input, dc.Sep)
+
+    era, erb = Edge.__bindings__
+
+    assert isinstance(era, Edge)
+    assert isinstance(erb, Edge)
+    assert era != erb
+    assert len(era.inputs) == 4
+    assert len(erb.inputs) == 4
+
+    assert nrb.id.input == erb.source.id.input
+    assert nrb.edges.id.input == erb.id.input
+
+
+def test_resolve():
+    resolve("Node[id, label, edges.id]")
+
+    resolve("Edge[weight, source.label, target.label]")
+
+    resolve("Node[label, sum(edges.weight)]")
+
+
+    with resolving(Node) as N:
+        (N.id, N.label, N.edges.id)
+
+    with resloving(Edge) as E:
+        (E.id, E.source.label, E.target.label)
+
+    with resloving(Node) as N:
+        (N.label, sum(N.edges.weight))
