@@ -1,118 +1,51 @@
 import pytest
 
-import declare as dc
+import dataneeds as need
 
 
-class Node(dc.Entity):
-    id = dc.Number()
-    label = dc.String()
-
-    @dc.relate
-    def edges(lower=0, upper=...):
-        return Edge()
+@pytest.fixture
+def graph():
+    import graph
+    return graph
 
 
-class Edge(dc.Entity):
-    id = dc.Number()
-    weight = dc.Number()
-
-    @dc.relate
-    def source():
-        return Node()
-
-    @dc.relate
-    def target():
-        return Node()
-
-
-# Node List Format
-# id,label,edge-ids...
-# 0,A,0,1
-# 1,B,2,3,4
-# 2,C,
-
-class NodeListFormat(dc.Source):
-    N = Node()
-
-    (dc.Files("tests/*.nlf") >>
-     dc.Sep(',', 3) >>
-     dc.Cons(N.id,
-             N.label,
-             dc.Sep(',') >> dc.Each(N.edges.id)))
-
-
-# Edge List Format
-# id,weight,source,target
-# 0,.3,0,1
-# 1,.2,0,2
-# 2,.2,1,0
-# 3,1.,1,1
-# 4,.4,1,2
-
-class EdgeListFormat(dc.Source):
-    E = Edge()
-
-    (dc.Files("tests/*.elf") >>
-     dc.Sep(',') >>
-     dc.Cons(E.id,
-             E.weight,
-             E.source.id,
-             E.target.id))
-
-
-# Node Edge Format
-# node-id,laebl,edge-id:weight:target-id,...
-# 0,A,0:.3:1,1:.2:2
-# 1,B,2:.2:0,3:1.:1,4:.4:2
-# 2,C,
-
-class NodeEdgeFormat:
-    N = Node()
-    E = Edge()
-
-    (dc.Files("tests/*.nef") >>
-     dc.Sep(',', 3) >>
-     ((N.id & E.source.id) + N.label + dc.Sep(',') >> dc.Each(
-         dc.Sep('.') >> ((E.id & N.edges.id) + E.weight + E.target.id))))
-
-
-def test_entities():
-    n = Node()
-    e = Edge()
+def test_entities(graph):
+    n = graph.Node()
+    e = graph.Edge()
 
     with pytest.raises(AttributeError):
         n.foobar
 
-    assert isinstance(n.id.typ, dc.Number)
-    assert isinstance(n.label.typ, dc.String)
+    assert isinstance(n.id.typ, need.Number)
+    assert isinstance(n.label.typ, need.String)
 
-    assert isinstance(n.edges.entity, Edge)  # XXX Relation
+    assert isinstance(n.edges.entity, graph.Edge)  # XXX Relation
 
-    assert isinstance(e.id.typ, dc.Number)
-    assert isinstance(e.weight.typ, dc.Number)
+    assert isinstance(e.id.typ, need.Number)
+    assert isinstance(e.weight.typ, need.Number)
 
-    assert isinstance(e.source.entity, Node)  # XXX Relation
-    assert isinstance(e.target.entity, Node)  # XXX Relation
+    assert isinstance(e.source.entity, graph.Node)  # XXX Relation
+    assert isinstance(e.target.entity, graph.Node)  # XXX Relation
 
-    assert "test_graph" in repr(n.id)
+    assert "graph" in repr(n.id)
     assert "Number" in repr(n.id)
     assert "Node" in repr(n.id)
 
-    assert "test_graph.Node" in repr(n.edges.id)
-    assert "test_graph.Edge.id" in repr(n.edges.id)
+    assert "graph.Node" in repr(n.edges.id)
+    assert "graph.Edge.id" in repr(n.edges.id)
 
 
-def test_binds():
-    assert Node.__bindings__ is not Edge.__bindings__
-    assert Node().__bindings__ is Node().__bindings__
+def test_binds(graph):
+    assert graph.Node.__bindings__ is not graph.Edge.__bindings__
+    assert graph.Node().__bindings__ is graph.Node().__bindings__
 
-    assert len(Node.__bindings__) == 2
-    assert len(Edge.__bindings__) == 2
+    assert len(graph.Node.__bindings__) == 2
+    assert len(graph.Edge.__bindings__) == 2
 
-    nra, nrb = Node.__bindings__
+    nra, nrb = graph.Node.__bindings__
 
-    assert isinstance(nra, Node)
-    assert isinstance(nrb, Node)
+    assert isinstance(nra, graph.Node)
+    assert isinstance(nrb, graph.Node)
     assert nra != nrb
     assert len(nrb.inputs) == 3
     assert len(nra.inputs) == 3
@@ -120,19 +53,19 @@ def test_binds():
     assert nra.id in nra.inputs
     assert nra.label in nra.inputs
     assert nra.edges.id in nra.inputs
-    assert isinstance(nra.id.input, dc.Cons)
+    assert isinstance(nra.id.input, need.Cons)
     assert nra.id.input == nra.label.input
 
-    assert isinstance(nra.edges.id.input, dc.Each)
-    assert isinstance(nra.edges.id.input.input, dc.Sep)
+    assert isinstance(nra.edges.id.input, need.Each)
+    assert isinstance(nra.edges.id.input.input, need.Sep)
     assert nra.id.input == nra.edges.id.input.input.input
 
-    assert isinstance(nra.id.input.input, dc.Sep)
+    assert isinstance(nra.id.input.input, need.Sep)
 
-    era, erb = Edge.__bindings__
+    era, erb = graph.Edge.__bindings__
 
-    assert isinstance(era, Edge)
-    assert isinstance(erb, Edge)
+    assert isinstance(era, graph.Edge)
+    assert isinstance(erb, graph.Edge)
     assert era != erb
     assert len(era.inputs) == 4
     assert len(erb.inputs) == 4
@@ -141,19 +74,27 @@ def test_binds():
     assert nrb.edges.id.input == erb.id.input
 
 
-def test_resolve():
-    resolve("Node[id, label, edges.id]")
+def test_request(graph):
+    with need.request(graph.Node()) as N:
+        N.id
+        N.label
+        N.edges.id
+    assert len(N.items) == 3
 
-    resolve("Edge[weight, source.label, target.label]")
+    with need.request(graph.Edge()) as E:
+        E.id
+        E.weight
+        E.source.label
+        E.target.label
+    assert len(E.items) == 4
 
-    resolve("Node[label, sum(edges.weight)]")
+    with need.request(graph.Node()) as N:
+        N.label
+        sum(N.edges.weight)
+    assert len(N.items) == 2
 
 
-    with resolving(Node) as N:
-        (N.id, N.label, N.edges.id)
-
-    with resloving(Edge) as E:
-        (E.id, E.source.label, E.target.label)
-
-    with resloving(Node) as N:
-        (N.label, sum(N.edges.weight))
+def test_reslove(graph):
+    with need.request(graph.Node()) as N:
+        N.id, N.label
+    N.reslove()

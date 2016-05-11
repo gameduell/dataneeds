@@ -4,4 +4,4 @@ from .source import Source
 from .types import *
 from .formats import *
 
-from .api import resolve
+from .api import request
