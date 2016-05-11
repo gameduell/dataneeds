@@ -1,11 +1,9 @@
-Declares Data
-===
-
+# Declares Data
 
 Decalre is about a declerative approch to data processing. Instead of
-describing exactly *how* to load and process your data, you define a
+describing exactly __how__ to load and process your data, you define a
 descriptive repository of your data sources and then only have to describe
-*what* data you need to load. Exporting of data can be handled the same way by
+__what__ data you need to load. Exporting of data can be handled the same way by
 Declares, using definitions of data sinks.
 
 Moreover Declare can apply many transformations, like references to other
@@ -28,8 +26,7 @@ Meta-classes inside Declare:
  * Processors:  data processing with declaritive in- and output
 
 
-Types
----
+## Types
 
 Data have types, allowing to do different things with them. For example you can
 add hours to a timestamp, but not to an integer. Types keep track of this.
@@ -39,8 +36,7 @@ advanced types like Timestamps, Tuples or Categoricals. And you can define your
 own Types.
 
 
-Entitis
----
+## Entitis
 
 Entities are the things you talk about in your domain, that can be users,
 events that are happening on your platform or an account.
@@ -49,8 +45,7 @@ To combine different information, entities should be referrable, identified
 by key-fields.
 
 
-Records
----
+## Records
 
 Normally data is stored as records, grouping together related information.
 
@@ -59,8 +54,7 @@ records.
 
 / There's an Event class that is both Entity and the primitive record of itself. /
 
-Formats
----
+## Formats
 
 A format descripes how data entries are stored.
 
@@ -72,27 +66,89 @@ have formats on there own. And this can be combine into a big Bzip2ed file or a
 pickled list, so formats most likely are hierachal.
 
 
-Bla
-===
+# Definition Grammer
 
+## Struct Definition
+ * __attributes__ to __type instances__
 ```
-class Entity1(Entity):
-    attr1 = Type1()
-    attr2 = Type2()
+class AStruct(Struct):
+    attr1 = AType()
+    attr2 = OtherType()
+```
+
+## Entity Definition
+ * __attributes__ with __type instances__
+ * __references__ to other __entity instances__
+```
+class AEntity(Entity):
+    attr1 = AType()
+    attr2 = OtherType()
+    attr3 = AStruct()
     ...
-    ref1 = Entity1()
-    ref2 = Entity2()
+    ref1 = OtherEntity()
+    ref2 = YetAnotherEntity()
     ...
     # TODO Cardinalities
-
-
-class Record1(Record):
-    attr1 = dc.Format() >> Entity1.attr1
-    attr2 = dc.Format() >> Entity1.attr2
-
-    ref1 = Entity1.ref1.id1
-    ref2 = Entity1.ref2.id1
-
-    # FIXME Record vs Format
 ```
 
+## Record Definition
+ * __attributes* referring to __attributes of entity classes__
+ * __inner__ defines with __type instances__ to other __record instances__
+ * __references__ as __keys of entity classes__
+
+```
+class ARecord(Record):
+    attr1 = AEntity.attr1
+    attr2 = AEntity.attr2
+    inner1 = AType() >> InnerRecord()
+    inner2 = OtherInnerRecord()
+
+    ref1 = AEntity.ref1.an_id
+    ref2_key1 = ~AEntity.ref2.key1
+    ref2_key2 = ~AEntity.ref2.key2
+
+class BRecord(ARecord):
+    attr1 = BEntity.attr1
+    attr2 = (AType() >> BEntity.attr2)
+    inner1 = SpecificInnerRecord()
+```
+
+## Event Definition
+Like entities, but define a naive record accordingly. Inners can also be bound
+to Structs and Entities, creating a naive Record for them.
+```
+class AEvent(Record, Entity):
+    attr1 = AType()
+    attr2 = Type2()
+    inner1 = AType() >> InnerStruct()
+    inner2 = OtherInnerRecord()
+
+    ref1 = AEntity.ref1.an_id
+    ref2_key1 = ~AEntity.ref2.key1
+    ref2_key2 = ~AEntity.ref2.key2
+```
+
+## Format Definition
+ * __format record DAG__
+```
+class AInput:
+    (Files(...)
+     >> Sep(',')
+     >> ARecord())
+```
+
+# Towards Dask
+
+Were starting with the Format Definition:
+
+```
+(Files(...)
+ >> Sep(',')
+ >> ARecord())
+```
+
+For the dask.bag backend, we have now that `Files(...)` gives a bag of lines,
+and Sep can transform a bag of lines into a bag of tuples,
+which has a naive interpretation as a record.
+
+So we can generate a bag of ARecort-entries ...

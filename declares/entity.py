@@ -1,5 +1,6 @@
-class Entity:
-    def __rshift__(self, other):
-        if not isinstance(other, Entity):
-            return NotImplemented
-        return self
+from .formats import Format
+
+
+class Entity(Format):
+    def __bind__(self, input):
+        self.input = input

@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from .entity import Entity
+from .formats import Format
 
 
 class RecordMeta(type):
@@ -13,7 +14,14 @@ class RecordMeta(type):
         return new
 
 
-class Record(metaclass=RecordMeta):
+class Record(Format, metaclass=RecordMeta):
+    def __bind__(self, input):
+        self.input = input
+
+    @property
+    def __out__(self):
+        return ...
+
     def __str__(self):
         return '<{}>'.format(','.join(self.__order__))
 
