@@ -2,6 +2,8 @@ __all__ = ['Binds']
 
 
 class Input:
+    """Discreptor for inputs that can only be assigned once."""
+
     def __get__(self, instance, owner):
         if instance is None:
             return self

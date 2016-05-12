@@ -9,6 +9,13 @@ def graph():
     return graph
 
 
+def test_graph():
+    import graph
+
+    assert graph.Node
+    assert graph.Edge
+
+
 def test_entities(graph):
     n = graph.Node()
     e = graph.Edge()
@@ -30,6 +37,7 @@ def test_entities(graph):
     assert "graph" in repr(n.id)
     assert "Number" in repr(n.id)
     assert "Node" in repr(n.id)
+    assert "id" in repr(n.id)
 
     assert "graph.Node" in repr(n.edges.id)
     assert "graph.Edge.id" in repr(n.edges.id)
@@ -47,12 +55,12 @@ def test_binds(graph):
     assert isinstance(nra, graph.Node)
     assert isinstance(nrb, graph.Node)
     assert nra != nrb
-    assert len(nrb.inputs) == 3
-    assert len(nra.inputs) == 3
+    assert len(nrb.bindings) == 3
+    assert len(nra.bindings) == 3
 
-    assert nra.id in nra.inputs
-    assert nra.label in nra.inputs
-    assert nra.edges.id in nra.inputs
+    assert nra.id == nra.bindings['id']
+    assert nra.label == nra.bindings['label']
+    assert nra.edges.id == nra.bindings['edges.id']
     assert isinstance(nra.id.input, need.Cons)
     assert nra.id.input == nra.label.input
 
@@ -67,8 +75,8 @@ def test_binds(graph):
     assert isinstance(era, graph.Edge)
     assert isinstance(erb, graph.Edge)
     assert era != erb
-    assert len(era.inputs) == 4
-    assert len(erb.inputs) == 4
+    assert len(era.bindings) == 4
+    assert len(erb.bindings) == 4
 
     assert nrb.id.input == erb.source.id.input
     assert nrb.edges.id.input == erb.id.input

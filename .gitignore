@@ -5,3 +5,4 @@ __pycache__
 .cache
 test_report.json
 .tags*
+.ipython_checkpoints

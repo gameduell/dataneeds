@@ -1,10 +1,16 @@
 import contextlib
 
-from .types import InstanceAttribute
 from .entity import InstanceRelation
+from .types import InstanceAttribute
+
+
+@contextlib.contextmanager
+def request(entity, **options):
+    yield Request(entity, **options)
 
 
 class Request:
+
     def __init__(self, entity, **options):
         self.entity = entity
         self.options = options
@@ -22,31 +28,48 @@ class Request:
         elif isinstance(field, InstanceRelation):
             item = RelationItem(self, field)
         else:
-            raise ValueError("Don't know how to serve a %r" % type(field))
+            raise ValueError("Don't know how to request a %r" % type(field))
 
         self.items.append(item)
         return item
 
 
 class Item:
+
     def __iter__(self):
         return iter((IterItem(self),))
 
 
 class AttrItem(Item):
+
     def __init__(self, request, attr):
         self.request = request
         self.attr = attr
 
 
-class RelationItem(Item, Request):
+class RelationItem(Item):
+
     def __init__(self, request, rel):
-        super().__init__(rel.entity)
         self.request = request
         self.rel = rel
+        self.item = None
+
+    def __getattr__(self, name):
+        field = getattr(self.rel.entity, name)
+
+        if isinstance(field, InstanceAttribute):
+            item = AttrItem(self, field)
+        elif isinstance(field, InstanceRelation):
+            item = RelationItem(self, field)
+        else:
+            raise ValueError("Don't know how to request a %r" % type(field))
+
+        self.item = item
+        return item
 
 
 class IterItem(Item):
+
     def __init__(self, item):
         self.item = item
         self.op = None
@@ -57,8 +80,3 @@ class IterItem(Item):
                              "use simple things like `sum(Entity.attr)` only")
         self.op = 'sum'
         return self
-
-
-@contextlib.contextmanager
-def request(entity, **options):
-    yield Request(entity, **options)

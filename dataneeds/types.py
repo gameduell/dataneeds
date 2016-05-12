@@ -1,4 +1,5 @@
 from .binds import Binds
+from .utils import nameof
 
 import weakref
 
@@ -31,48 +32,59 @@ class Type(Binds):
 
     def __get__(self, instance, owner):
         if instance is None:
-            return OwnedAttribute(self, owner)
+            try:
+                return self.__attrs__[owner]
+            except KeyError:
+                attr = OwnedAttribute(nameof(self, owner), self, owner)
+                self.__attrs__[owner] = attr
+                return attr
         else:
             try:
                 return self.__attrs__[instance]
             except KeyError:
-                attr = InstanceAttribute(self, instance)
+                attr = InstanceAttribute(nameof(self, owner), self, instance)
                 self.__attrs__[instance] = attr
                 return attr
 
 
-class OwnedAttribute:
-    """An attribute of an entity class defined with a Type."""
-
-    def __init__(self, typ, owner):
+class OwnedAttribute(Type):
+    def __init__(self, name, typ, owner):
+        self.name = name
         self.typ = typ
         self.owner = owner
 
     def __str__(self):
-        return "{typ}".format(typ=self.typ)
+        return "{owner}.{name}:{typ}".format(typ=self.typ,
+                                             name=self.name,
+                                             owner=self.owner)
 
     def __repr__(self):
-        return "{typ!r} attr of {owner!r}".format(typ=self.typ,
+        return "{owner!r}.{name}: {typ!r}".format(typ=self.typ,
+                                                  name=self.name,
                                                   owner=self.owner)
 
 
 class InstanceAttribute(Type, Binds):
     """An attribute of an entity instance defined with a Type."""
 
-    def __init__(self, typ, instance):
+    def __init__(self, name, typ, instance):
+        self.name = name
         self.typ = typ
         self.instance = instance
 
     def __str__(self):
-        return "{typ}".format(typ=self.typ)
+        return "{instance}.{name}:{typ}".format(typ=self.typ,
+                                                name=self.name,
+                                                instance=self.instance)
 
     def __repr__(self):
-        return "{typ!r} attr of a {instance!r}".format(typ=self.typ,
-                                                       instance=self.instance)
+        return "{instance!r}.{name}: {typ!r}".format(typ=self.typ,
+                                                     name=self.name,
+                                                     instance=self.instance)
 
     def __bind__(self, input):
         self.input = input
-        self >> self.instance
+        self.instance.binds(self.name, self)
 
 
 class Any(Type):
