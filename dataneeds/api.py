@@ -1,7 +1,7 @@
 import contextlib
 
-from .entity import InstanceRelation
-from .types import InstanceAttribute
+from .entity import Relation
+from .types import Attribute
 
 
 @contextlib.contextmanager
@@ -23,9 +23,9 @@ class Request:
     def __getattr__(self, name):
         field = getattr(self.entity, name)
 
-        if isinstance(field, InstanceAttribute):
+        if isinstance(field, Attribute):
             item = AttrItem(self, field)
-        elif isinstance(field, InstanceRelation):
+        elif isinstance(field, Relation):
             item = RelationItem(self, field)
         else:
             raise ValueError("Don't know how to request a %r" % type(field))
@@ -55,11 +55,11 @@ class RelationItem(Item):
         self.item = None
 
     def __getattr__(self, name):
-        field = getattr(self.rel.entity, name)
+        field = getattr(self.rel.towards, name)
 
-        if isinstance(field, InstanceAttribute):
+        if isinstance(field, Attribute):
             item = AttrItem(self, field)
-        elif isinstance(field, InstanceRelation):
+        elif isinstance(field, Relation):
             item = RelationItem(self, field)
         else:
             raise ValueError("Don't know how to request a %r" % type(field))

@@ -1,8 +1,12 @@
+import weakref
+
+from .utils import Owned
+
 __all__ = ['Binds']
 
 
 class Input:
-    """Discreptor for inputs that can only be assigned once."""
+    """Discreptor for inputs, can only be assigned once."""
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -21,6 +25,12 @@ class Input:
 
 
 class Binds:
+    """
+    Implements `>>` for binding input
+
+    >>> AFormat() >> OtherFormat() >> entity.attr
+    """
+
     input = Input()
 
     def __bind__(self, input):
@@ -33,6 +43,10 @@ class Binds:
 
 
 class Bundle:
+    """
+    Bundling together objects after `>>`, so further binds can take place.
+    """
+
     def __init__(self, a, b):
         self.a = a
         self.b = b
@@ -49,3 +63,25 @@ class Bundle:
         # other >> self
         other >> self.a
         return Bundle(other, self)
+
+    def __str__(self):
+        return "{}>>{}".format(self.a, self.b)
+
+    def __repr__(self):
+        return "{!r} >> {!r}".format(self.a, self.b)
+
+
+class BindingsDescriptor:
+    """
+    Descriptor for storing bindings assosiated with owned attributes.
+    """
+
+    def __init__(self):
+        self.binds = weakref.WeakKeyDictionary()
+
+    def __get__(self, instance, owner):
+        assert isinstance(instance, Owned)
+        key = getattr(instance.owner, instance.name)
+        if key not in self.binds:
+            self.binds[key] = []
+        return self.binds[key]

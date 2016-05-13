@@ -1,10 +1,11 @@
-from .binds import Binds
-from .utils import nameof
-
 import weakref
 
+from .binds import BindingsDescriptor, Binds
+from .utils import Owned, OwningDescriptor
 
-class Type(Binds):
+
+class Type(OwningDescriptor, Binds):
+
     def __init__(self):
         super().__init__()
         self.__attrs__ = weakref.WeakKeyDictionary()
@@ -30,61 +31,28 @@ class Type(Binds):
     def __repr__(self):
         return type(self).__name__
 
-    def __get__(self, instance, owner):
-        if instance is None:
-            try:
-                return self.__attrs__[owner]
-            except KeyError:
-                attr = OwnedAttribute(nameof(self, owner), self, owner)
-                self.__attrs__[owner] = attr
-                return attr
-        else:
-            try:
-                return self.__attrs__[instance]
-            except KeyError:
-                attr = InstanceAttribute(nameof(self, owner), self, instance)
-                self.__attrs__[instance] = attr
-                return attr
+    def __owned__(self, name, instance, owner):
+        return Attribute(name, instance, owner, self)
 
 
-class OwnedAttribute(Type):
-    def __init__(self, name, typ, owner):
-        self.name = name
+class Attribute(Owned, Type):
+    bindings = BindingsDescriptor()
+
+    def __init__(self, name, instance, owner, typ):
+        super().__init__(name, instance, owner)
         self.typ = typ
-        self.owner = owner
 
     def __str__(self):
-        return "{owner}.{name}:{typ}".format(typ=self.typ,
-                                             name=self.name,
-                                             owner=self.owner)
+        return "{owned}.{name}:{typ}".format(
+            typ=self.typ, name=self.name, owned=self.owned)
 
     def __repr__(self):
-        return "{owner!r}.{name}: {typ!r}".format(typ=self.typ,
-                                                  name=self.name,
-                                                  owner=self.owner)
-
-
-class InstanceAttribute(Type, Binds):
-    """An attribute of an entity instance defined with a Type."""
-
-    def __init__(self, name, typ, instance):
-        self.name = name
-        self.typ = typ
-        self.instance = instance
-
-    def __str__(self):
-        return "{instance}.{name}:{typ}".format(typ=self.typ,
-                                                name=self.name,
-                                                instance=self.instance)
-
-    def __repr__(self):
-        return "{instance!r}.{name}: {typ!r}".format(typ=self.typ,
-                                                     name=self.name,
-                                                     instance=self.instance)
+        return "{owned!r}.{name}: {typ!r}".format(
+            typ=self.typ, name=self.name, owned=self.owned)
 
     def __bind__(self, input):
+        self.bindings.append(self)
         self.input = input
-        self.instance.binds(self.name, self)
 
 
 class Any(Type):
@@ -96,12 +64,14 @@ class Unknown(Type):
 
 
 class Optional(Type):
+
     def __init__(self, inner):
         super().__init__()
         self.inner = inner
 
 
 class Both(Type):
+
     def __init__(self, *types):
         super().__init__()
         self.types = types
@@ -113,6 +83,7 @@ class Both(Type):
 
 
 class Cons(Type):
+
     def __init__(self, *types):
         super().__init__()
         self.types = types
@@ -136,6 +107,7 @@ class Cons(Type):
 
 
 class Either(Type):
+
     def __init__(self, *types):
         super().__init__()
         self.types = types
@@ -168,6 +140,7 @@ class String(Type):
 
 
 class Regexp(Type):
+
     def __init__(self, regexp: String):
         super().__init__()
         import re
@@ -180,6 +153,7 @@ class Timestamp(Type):
 
 
 class List(Type):
+
     def __init__(self, inner: Type):
         super().__init__()
         self.inner = inner
@@ -187,6 +161,7 @@ class List(Type):
 
 
 class Set(Type):
+
     def __init__(self, inner: Type):
         super().__init__()
         self.inner = inner
@@ -194,6 +169,7 @@ class Set(Type):
 
 
 class Dict(Type):
+
     def __init__(self, keys: Type, values: Type):
         super().__init__()
         self.keys = keys
@@ -202,6 +178,7 @@ class Dict(Type):
 
 
 class Categorical(Type):
+
     def __init__(self, name):
         super().__init__()
         self.name = name

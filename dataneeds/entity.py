@@ -1,8 +1,6 @@
-from .binds import Binds
+from .binds import BindingsDescriptor, Binds
 from .types import Type
-from .utils import nameof
-
-import weakref
+from .utils import Owned, OwningDescriptor
 
 __all__ = ['Entity']
 
@@ -19,67 +17,63 @@ class EntityMeta(type):
         return cls.__name__
 
     def __repr__(cls):
-        return cls.__module__ + "." + cls.__name__
+        if str(cls.__module__) == '__main__':
+            return cls.__name__
+        else:
+            return cls.__module__ + "." + cls.__name__
 
 
-class RelatesDescriptor:
-    def __init__(self, *args, **kws):
-        super().__init__(*args, **kws)
-        self.__rels__ = weakref.WeakKeyDictionary()
+class Entity(OwningDescriptor, metaclass=EntityMeta):
+    """
+    Base class for entity definitions.
 
-    @property
-    def _entity(self):
-        raise NotImplementedError
-
-    @property
-    def _cardinality(self):
-        raise NotImplementedError
-
-    def __get__(self, instance, owner):
-        try:
-            return self.__rels__[instance or owner]
-        except KeyError:
-            name = nameof(self, owner)
-            if instance is None:
-                key = owner
-                Cls = OwnedRelation
-            else:
-                key = instance
-                Cls = InstanceRelation
-
-            self.__rels__[key] = rel = Cls(name, key,
-                                           self._entity, self._cardinality)
-            return rel
-
-
-class Entity(RelatesDescriptor, Binds, metaclass=EntityMeta):
-    """Base class for entity definitions."""
+    :note: when used inside another object,
+           a relation towards this entity is defined.
+    """
 
     def __init__(self):
         super().__init__()
         self.bindings = {}
 
-    @property
-    def _entity(self):
-        return self
-
-    def binds(self, name, input):
-        self.bindings[name] = input
-
-        if self not in self.__bindings__:
-            self.__bindings__.append(self)
-
-    def declare(self):
-        pass
+    def __owned__(self, name, instance, owner):
+        return Relation(name, instance, owner, self, {})
 
     def __str__(self):
-        return str(type(self))
+        return "{cls}()".format(cls=type(self))
 
     def __repr__(self):
-        return repr(type(self))
+        return "{cls!r}()".format(cls=type(self))
 
 
-class Relation(RelatesDescriptor):
+class Relation(Owned):
+    """Relation definition towards another object."""
+
+    bindings = BindingsDescriptor()
+
+    def __init__(self, name, instance, owner, towards, cardinality={}):
+        super().__init__(name, instance, owner)
+        self.towards = towards
+        self.cardinality = cardinality
+
+    def __getattr__(self, name):
+        attr = getattr(self.towards, name)
+        if not isinstance(attr, Owned):
+            raise AttributeError("No access to {!r} ({}) through relations."
+                                 .format(name, type(attr).__name__))
+        rel = RelationKey(self, name, attr)
+        setattr(self, name, rel)
+        return rel
+
+    def __str__(self):
+        return "{src!s}.{name}->{tgt!s}".format(
+            src=self.owner, name=self.name, tgt=self.towards)
+
+    def __repr__(self):
+        return "{src!r}.{name}->{tgt!r}".format(
+            src=self.owner, name=self.name, tgt=self.towards)
+
+
+class RelationAnnotation(OwningDescriptor):
     """
     Relations through annotations for cross/self-references in entities.
 
@@ -91,53 +85,19 @@ class Relation(RelatesDescriptor):
 
     def __init__(self, definition):
         super().__init__()
-        self.card = {}  # XXX get card from definition
         self.definition = definition
         self.entity = None
-        self.__rels__ = weakref.WeakKeyDictionary()
 
-    @property
-    def _entity(self):
-        if self.entity is None:
-            self.entity = self.definition()
-        return self.entity
+    def __owned__(self, name, instance, owner):
+        assert name == self.definition.__name__
+        entity = self.definition()
+        card = {}  # XXX get card from definition
+        return Relation(name, instance, owner, entity, card)
 
-    @property
-    def _cardinality(self):
-        return self.card
-
-relate = Relation
+relate = RelationAnnotation
 
 
-class OwnedRelation:
-    def __init__(self, name, instance, entity, card):
-        pass
-
-
-class InstanceRelation(Binds):
-    """Relation information to a specific entity instance."""
-
-    def __init__(self, name, instance, entity, card):
-        self.name = name
-        self.instance = instance
-        self.entity = entity
-        self.card = card
-
-    def __getattr__(self, name):
-        rel = RelationKey(self, name, getattr(self.entity, name))
-        setattr(self, name, rel)
-        return rel
-
-    def __str__(self):
-        return "{src!s}->{tgt!s}".format(src=self.instance,
-                                         tgt=self.entity)
-
-    def __repr__(self):
-        return "{src!r}->{tgt!r}".format(src=self.instance,
-                                         tgt=self.entity)
-
-
-class RelationKey(Type):
+class RelationKey(Type, Binds):
     """Reference to a key of a related entity."""
 
     def __init__(self, rel, name, attr):
@@ -147,7 +107,7 @@ class RelationKey(Type):
 
     def __bind__(self, input):
         self.input = input
-        self.rel.instance.binds(self.rel.name + "." + self.name, self)
+        self.rel.bindings.append(self)
 
     def __str__(self):
         return "{rel!s}.{name}".format(rel=self.rel, name=self.name)

@@ -23,16 +23,19 @@ def test_entities(graph):
     with pytest.raises(AttributeError):
         n.foobar
 
+    with pytest.raises(AttributeError):
+        n.edges.baz
+
     assert isinstance(n.id.typ, need.Number)
     assert isinstance(n.label.typ, need.String)
 
-    assert isinstance(n.edges.entity, graph.Edge)  # XXX Relation
+    assert isinstance(n.edges.towards, graph.Edge)  # XXX Relation
 
     assert isinstance(e.id.typ, need.Number)
     assert isinstance(e.weight.typ, need.Number)
 
-    assert isinstance(e.source.entity, graph.Node)  # XXX Relation
-    assert isinstance(e.target.entity, graph.Node)  # XXX Relation
+    assert isinstance(e.source.towards, graph.Node)  # XXX Relation
+    assert isinstance(e.target.towards, graph.Node)  # XXX Relation
 
     assert "graph" in repr(n.id)
     assert "Number" in repr(n.id)
@@ -40,46 +43,40 @@ def test_entities(graph):
     assert "id" in repr(n.id)
 
     assert "graph.Node" in repr(n.edges.id)
-    assert "graph.Edge.id" in repr(n.edges.id)
+    assert "graph.Edge().id" in repr(n.edges.id)
 
 
 def test_binds(graph):
-    assert graph.Node.__bindings__ is not graph.Edge.__bindings__
-    assert graph.Node().__bindings__ is graph.Node().__bindings__
+    assert graph.Node().id.bindings == graph.Node.id.bindings
+    assert graph.Edge.id.bindings != graph.Node.id.bindings
+    assert graph.Node.label.bindings != graph.Node.id.bindings
+    assert graph.Node.edges.bindings != graph.Node.id.bindings
 
-    assert len(graph.Node.__bindings__) == 2
-    assert len(graph.Edge.__bindings__) == 2
+    assert len(graph.Node.id.bindings) == 2
+    assert len(graph.Node.edges.bindings) == 2
+    assert len(graph.Edge.weight.bindings) == 2
 
-    nra, nrb = graph.Node.__bindings__
+    a, b = graph.Node.id.bindings
 
-    assert isinstance(nra, graph.Node)
-    assert isinstance(nrb, graph.Node)
-    assert nra != nrb
-    assert len(nrb.bindings) == 3
-    assert len(nra.bindings) == 3
+    assert "Node" in str(a)
+    assert "Node" in str(b)
+    assert "id" in str(a)
+    assert "id" in str(b)
+    assert a != b
 
-    assert nra.id == nra.bindings['id']
-    assert nra.label == nra.bindings['label']
-    assert nra.edges.id == nra.bindings['edges.id']
-    assert isinstance(nra.id.input, need.Cons)
-    assert nra.id.input == nra.label.input
+    assert isinstance(a.input, need.Cons)
+    assert a.input == graph.Node.label.bindings[0].input
 
-    assert isinstance(nra.edges.id.input, need.Each)
-    assert isinstance(nra.edges.id.input.input, need.Sep)
-    assert nra.id.input == nra.edges.id.input.input.input
+    e = graph.Node.edges.bindings[0]
+    assert isinstance(e.input, need.Each)
+    assert isinstance(e.input.input, need.Sep)
+    assert a.input == e.input.input.input
 
-    assert isinstance(nra.id.input.input, need.Sep)
+    assert isinstance(a.input.input, need.Sep)
 
-    era, erb = graph.Edge.__bindings__
+    c = graph.Edge.source.bindings[1]
 
-    assert isinstance(era, graph.Edge)
-    assert isinstance(erb, graph.Edge)
-    assert era != erb
-    assert len(era.bindings) == 4
-    assert len(erb.bindings) == 4
-
-    assert nrb.id.input == erb.source.id.input
-    assert nrb.edges.id.input == erb.id.input
+    assert c.input == b.input
 
 
 def test_request(graph):
