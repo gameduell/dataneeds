@@ -107,7 +107,7 @@ class RelationKey(Type, Binds):
 
     def __bind__(self, input):
         self.input = input
-        self.rel.bindings.append(self)
+        self.rel.bindings.add(self)
 
     def __str__(self):
         return "{rel!s}.{name}".format(rel=self.rel, name=self.name)

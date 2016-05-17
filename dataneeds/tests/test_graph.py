@@ -81,23 +81,17 @@ def test_binds(graph):
 
 def test_request(graph):
     with need.request(graph.Node()) as N:
-        N.id
-        N.label
-        N.edges.id
+        N.id, N.label, N.edges.id
 
     assert len(N.items) == 3
 
     with need.request(graph.Edge()) as E:
-        E.id
-        E.weight
-        E.source.label
-        E.target.label
+        E.id, E.weight, E.source.label, E.target.label
 
     assert len(E.items) == 4
 
     with need.request(graph.Node()) as N:
-        N.label
-        sum(N.edges.weight)
+        N.label, sum(N.edges.weight)
 
     assert len(N.items) == 2
 
@@ -105,4 +99,21 @@ def test_request(graph):
 def test_reslove(graph):
     with need.request(graph.Node()) as N:
         N.id, N.label
-    N.reslove()
+    rs = N.reslove()
+
+    assert(len(rs) == 2)
+
+    a, b = rs
+
+    assert isinstance(a[0].source, need.Files)
+    assert isinstance(b[0].source, need.Files)
+
+    assert all(ai.source == a[0].source for ai in a)
+    assert all(bi.source == b[0].source for bi in b)
+    assert a[0].source != b[0].source
+
+    with need.request(graph.Edge()) as E:
+        E.id, E.weight, E.source.label  # , E.target.label
+
+    rs = E.reslove()
+    assert(len(rs) == 1)

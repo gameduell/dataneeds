@@ -51,7 +51,7 @@ class Attribute(Owned, Type):
             typ=self.typ, name=self.name, owned=self.owned)
 
     def __bind__(self, input):
-        self.bindings.append(self)
+        self.bindings.add(self)
         self.input = input
 
 

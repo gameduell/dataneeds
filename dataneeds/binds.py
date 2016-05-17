@@ -83,5 +83,54 @@ class BindingsDescriptor:
         assert isinstance(instance, Owned)
         key = getattr(instance.owner, instance.name)
         if key not in self.binds:
-            self.binds[key] = []
+            self.binds[key] = Bindings()
         return self.binds[key]
+
+
+class Bindings:
+
+    def __init__(self):
+        self.bindings = []
+
+    def __len__(self):
+        return len(self.bindings)
+
+    def __iter__(self):
+        return iter(self.bindings)
+
+    def __getitem__(self, n):
+        return self.bindings[n]
+
+    def add(self, binds):
+        self.bindings.append(Binding(binds))
+
+
+class Binding:
+
+    def __init__(self, binds):
+        self.binds = binds
+
+    def __iter__(self):
+        o = self.binds
+        while True:
+            yield o
+            if o.input is None:
+                return o
+            else:
+                o = o.input
+
+    @property
+    def source(self):
+        for o in iter(self):
+            pass
+        return o
+
+    @property
+    def input(self):
+        return self.binds.input
+
+    def __str__(self):
+        return "Binding({})".format(self.binds)
+
+    def __repr__(self):
+        return " >> ".join(map(str, reversed(list(self))))

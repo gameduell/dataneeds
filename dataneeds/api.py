@@ -1,4 +1,5 @@
 import contextlib
+from collections import defaultdict
 
 from .entity import Relation
 from .types import Attribute
@@ -18,7 +19,19 @@ class Request:
         self.items = []
 
     def reslove(self):
-        pass
+        sets = defaultdict(set)
+
+        for item in self.items:
+            for b in item.resolving.bindings:
+                sets[b.source].add(b)
+
+        complete = set(tuple(s)
+                       for s in sets.values() if len(s) == len(self.items))
+        if complete:
+            return complete
+
+        else:
+            raise NotImplementedError("Resolve with %s" % sets)
 
     def __getattr__(self, name):
         field = getattr(self.entity, name)
@@ -46,6 +59,10 @@ class AttrItem(Item):
         self.request = request
         self.attr = attr
 
+    @property
+    def resolving(self):
+        return self.attr
+
 
 class RelationItem(Item):
 
@@ -53,6 +70,10 @@ class RelationItem(Item):
         self.request = request
         self.rel = rel
         self.item = None
+
+    @property
+    def resolving(self):
+        return self.item.resolving
 
     def __getattr__(self, name):
         field = getattr(self.rel.towards, name)
@@ -73,6 +94,10 @@ class IterItem(Item):
     def __init__(self, item):
         self.item = item
         self.op = None
+
+    @property
+    def resolving(self):
+        return self.item.resolving
 
     def __radd__(self, other):
         if other != 0:
