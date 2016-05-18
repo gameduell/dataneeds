@@ -4,6 +4,7 @@ from .binds import Binds
 
 
 class RecordMeta(type):
+
     def __prepare__(name, bases):
         return OrderedDict()
 
@@ -14,8 +15,9 @@ class RecordMeta(type):
 
 
 class Record(Binds, metaclass=RecordMeta):
+
     def __bind__(self, input):
-        self.input = input
+        pass
 
     @property
     def __out__(self):

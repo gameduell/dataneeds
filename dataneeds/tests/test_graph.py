@@ -96,10 +96,10 @@ def test_request(graph):
     assert len(N.items) == 2
 
 
-def test_reslove(graph):
+def test_resolve(graph):
     with need.request(graph.Node()) as N:
         N.id, N.label
-    rs = N.reslove()
+    rs = N.resolve()
 
     assert(len(rs) == 2)
 
@@ -115,5 +115,20 @@ def test_reslove(graph):
     with need.request(graph.Edge()) as E:
         E.id, E.weight, E.source.label  # , E.target.label
 
-    rs = E.reslove()
+    rs = E.resolve()
+    assert(len(rs) == 1)
+
+
+def test_execute(graph):
+    with need.request(graph.Node()) as N:
+        N.id, N.label
+    # N.execute()
+
+
+@pytest.mark.xfail
+def test_resolve_join(self):
+    with need.request(graph.Edge()) as E:
+        E.id, E.weight, E.source.label, E.target.label
+
+    rs = E.resolve()
     assert(len(rs) == 1)

@@ -23,7 +23,7 @@ class Type(OwningDescriptor, Binds):
         return Optional(self)
 
     def __bind__(self, input):
-        self.input = input
+        pass
 
     def __str__(self):
         return type(self).__name__
@@ -52,7 +52,6 @@ class Attribute(Owned, Type):
 
     def __bind__(self, input):
         self.bindings.add(self)
-        self.input = input
 
 
 class Any(Type):
@@ -77,7 +76,6 @@ class Both(Type):
         self.types = types
 
     def __bind__(self, input):
-        self.input = input
         for typ in self.types:
             input >> typ
 
@@ -101,7 +99,6 @@ class Cons(Type):
             return Cons(other, *self.types)
 
     def __bind__(self, input):
-        self.input = input
         for typ in self.types:
             self >> typ
 
@@ -125,7 +122,6 @@ class Either(Type):
             return Either(other, *self.types)
 
     def __bind__(self, input):
-        self.input = input
         for typ in self.types:
             self >> typ
 

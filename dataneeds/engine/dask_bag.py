@@ -1,98 +1,59 @@
 import dask.bag as db
+import dataneeds as need
 
-import declares as dc
-import declares.formats as fmt
+from .engine import Engine, impl
 
 
-class FilesImpl(implement=dc.Files):
-    def __init__(self, files: fmt.Files):
+class FilesImpl:
+
+    def __init__(self, files: need.Files):
         self.files = files
 
-    def __bind__(self, out_str):
-        pass
-
     @property
-    def __bag__(self):
+    def bag(self):
         return db.from_textfiles(self.files.pattern,
                                  compression=self.files.compression)
 
 
-class SepImpl(implement=dc.Sep):
-    def __init__(self, sep: fmt.Sep):
+class SepImpl:
+
+    def __init__(self, sep: need.Sep):
         self.sep = sep
-        self.nfields = None
-
-    def __bind__(self, in_str, out_tup):
-        pass
-
-    def __update__(self, in_str, out_tup):
-        if in_str is not None:
-            # TODO ensure same type and encoding
-            pass
-        if out_tup is not None:
-            self.nfields = out_tup.nfields
 
     @property
-    def __bag__(self):
-        # TODO ensure filter bla
-        return self.in_str.__bag__.map(str.split, key=self.sep)
+    def bag(self):
+        ins = self.sep.input
+        return ins.bag.map(str.split, sep=self.sep.sep, limit=self.sep.limit)
 
 
-class RecordTupleImpl:
-    __in__ = dc.Tuples
-    __out__ = dc.Records
+class DaskBagEngine(Engine):
 
-    def __init__(self, rec: dc.Record):
-        self.rec = rec
+    @impl
+    def files(self, files: need.Files):
+        return db.from_textfiles(files.pattern,
+                                 compression=files.compression)
 
-    def __bind__(self, in_tup, out_rec):
-        fs = [f.type for f in self.rec.fields()]
-        in_tup.confirm(fs)
-        out_rec.confirm(fs)
+    @impl
+    def sep(self, sep: need.Sep):
+        ins = self.resolve(sep.input)
+        return ins.map(str.split, sep=sep.sep, limit=sep.limit)
 
-    def __bag__(self):
-        # TODO ensure filter bla
-        return self.in_str.__bag__
+    @impl
+    def cons(self, cons: need.Cons):
+        cons.types
 
+    def resolve(self, items):
+        inputs = {it.input for it in items}
+        ins = items + inputs
+        return ins.bag
 
-class JsonDictsImpl:
-    __in__ = dc.Strings
-    __out__ = dc.Dicts
+        # either we lokk for common nodes and start from there
 
-    def __init__(self):
-        self.names = set()
-
-    def __bind__(self, in_str, out_dct):
-        pass
-
-    def __update__(self, in_str, out_dct):
-        if in_str is not None:
-            pass
-        if out_dct is not None:
-            self.names = {nt.name for nt in out_dct.keys()}
-
-    @property
-    def __bag__(self):
-        import ujson
-        # XXX error ensure filter bla ...
-        self.in_tup.__bag__.apply(ujson.loads)
-
-
-class RecordDictImpl:
-    __in__ = dc.Dicts
-    __out__ = dc.Records
-
-    def __init__(self, rec: dc.Record):
-        self.rec = rec
-
-    def __bind__(self, in_tup, out_rec):
-        fs = [f.type for f in self.rec.fields()]
-        in_tup.confirm(fs)
-        out_rec.confirm(fs)
-
-    @property
-    def __bag__(self):
-        self.in_tup.__bag__
-
-
-# TODO Projections pulled down
+        # or we iter through items, and join common selectors
+        # files >> sep >> cons >> a/0
+        # \ files.map(sep)
+        #                       \.pluck(0)
+        # files >> sep >> cons >> b/1
+        # \ files.map(sep)
+        #                       \.pluck(1)
+        # = files.map(sep).pluck(0,1)

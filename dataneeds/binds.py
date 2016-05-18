@@ -24,6 +24,18 @@ class Input:
         instance.__dict__['__input__'] = value
 
 
+class Outputs:
+    """Discreptor for outputs, can only be assigned once."""
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+
+        if '__outputs__' not in instance.__dict__:
+            instance.__dict__['__outputs__'] = []
+        return instance.__dict__['__outputs__']
+
+
 class Binds:
     """
     Implements `>>` for binding input
@@ -32,14 +44,21 @@ class Binds:
     """
 
     input = Input()
+    outputs = Outputs()
 
     def __bind__(self, input):
         return NotImplemented
 
-    def __rrshift__(self, other):
+    def __rrshift__(self, input):
         # other >> self
-        res = self.__bind__(other)
-        return Bundle(other, self) if res is None else res
+        res = self.__bind__(input)
+
+        if res is NotImplemented:
+            return res
+
+        self.input = input
+        input.outputs.append(self)
+        return Bundle(input, self) if res is None else res
 
 
 class Bundle:

@@ -11,19 +11,29 @@ class Format(Binds):
         return ()
 
 
+class SubFormat(Format):
+
+    def __init__(self, fmt, sub, out):
+        self.fmt = fmt
+        self.sub = sub
+        self.out = out
+
+    def __bind__(self, input):
+        ...
+
+
 class Either(Format):
 
     def __init__(self, *formats):
         self.formats = formats
 
     def __bind__(self, input):
-        self.input = input
         for fmt in self.formats:
             self >> fmt
 
     @property
     def __out__(self):
-        return (self.input.__out__,)
+        return (self.inputself.__out__,)
 
     def __str__(self):
         return "|".join(map(str, self.formats))
@@ -36,14 +46,12 @@ class Each(Format):
 
     def __init__(self, inner):
         self.inner = inner
-        self.input = None
 
     def __bind__(self, input):
-        self.input = input
         self >> self.inner
 
     def __str__(self):
-        return "*[{}]".format(self.inner)
+        return "Each"
 
     def __repr__(self):
         return "Each({!r})".format(self.inner)
@@ -57,7 +65,7 @@ class Re(Format):
 
     def __bind__(self, input):
         # assert input.__out__ == str
-        self.input = input
+        pass
 
     @property
     def __out__(self):
@@ -76,21 +84,24 @@ class Sep(Format):
 
     def __bind__(self, input):
         # assert isinstance(self.sep, input.__out__)
-        self.input = input
+        pass
 
     def __str__(self):
         return 'Sep({sep!r}, {limit})'.format(sep=self.sep, limit=self.limit)
 
     @property
     def __out__(self):
-        return [type(self.sep), ...]
+        if self.limit:
+            return [type(self.sep)] * self.limit
+        else:
+            return [type(self.sep), ...]
 
 
 class Json(Format):
 
     def __bind__(self, input):
         # assert issubclass(input.__out__, str)
-        self.input = input
+        pass
 
     @property
     def __out__(self):

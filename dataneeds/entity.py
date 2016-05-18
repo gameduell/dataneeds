@@ -106,7 +106,6 @@ class RelationKey(Type, Binds):
         self.attr = attr
 
     def __bind__(self, input):
-        self.input = input
         self.rel.bindings.add(self)
 
     def __str__(self):
