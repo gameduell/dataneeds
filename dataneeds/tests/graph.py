@@ -32,7 +32,7 @@ class Edge(need.Entity):
 class NodeListFormat(need.Source):
     N = Node()
 
-    (need.Files("tests/*.nlf") >>
+    (need.Files("dataneeds/tests/*.nlf") >>
      need.Sep(',', 3) >>
      need.Cons(N.id,
                N.label,
@@ -50,7 +50,7 @@ class NodeListFormat(need.Source):
 class EdgeListFormat(need.Source):
     E = Edge()
 
-    (need.Files("tests/*.elf") >>
+    (need.Files("dataneeds/tests/*.elf") >>
      need.Sep(',') >>
      need.Cons(E.id,
                E.weight,
@@ -68,7 +68,7 @@ class NodeEdgeFormat:
     N = Node()
     E = Edge()
 
-    (need.Files("tests/*.nef") >>
+    (need.Files("dataneeds/tests/*.nef") >>
      need.Sep(',', 3) >>
      ((N.id & E.source.id) + N.label + need.Sep(',') >> need.Each(
          need.Sep('.') >> ((E.id & N.edges.id) + E.weight + E.target.id))))

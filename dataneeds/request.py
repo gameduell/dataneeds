@@ -73,7 +73,7 @@ class RelationItem(Item):
 
     @property
     def resolving(self):
-        return self.item.resolving
+        return self.rel
 
     def __getattr__(self, name):
         field = getattr(self.rel.towards, name)

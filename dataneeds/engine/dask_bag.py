@@ -1,7 +1,8 @@
 import dask.bag as db
 import dataneeds as need
 
-from .engine import Engine, impl
+from ..entity import RelationKey
+from ..types import Attribute
 
 
 class FilesImpl:
@@ -26,34 +27,49 @@ class SepImpl:
         return ins.bag.map(str.split, sep=self.sep.sep, limit=self.sep.limit)
 
 
-class DaskBagEngine(Engine):
+__impls__ = {}
+
+
+class DaskBagEngine:
+
+    def impl(f):
+        typ, = f.__annotations__.values()
+        __impls__[typ] = f
 
     @impl
     def files(self, files: need.Files):
-        return db.from_textfiles(files.pattern,
-                                 compression=files.compression)
+        return (db
+                .from_filenames(files.pattern, compression=files.compression)
+                .map(str.strip))
 
     @impl
     def sep(self, sep: need.Sep):
-        ins = self.resolve(sep.input)
-        return ins.map(str.split, sep=sep.sep, limit=sep.limit)
+        ins = self.bag(sep.input)
+        return ins.map(str.split, sep=sep.sep, maxsplit=sep.limit)
+
+    @impl
+    def each(self, each: need.Each):
+        ins = self.bag(each.input)
+        return ins.concat()
 
     @impl
     def cons(self, cons: need.Cons):
-        cons.types
+        return self.bag(cons.input)
+
+    @impl
+    def attr(self, attr: Attribute):
+        ins = self.bag(attr.input)
+        i = attr.input.outputs.index(attr)
+        return ins.pluck(i)
+
+    @impl
+    def key(self, key: RelationKey):
+        ins = self.bag(key.input)
+        i = key.input.outputs.index(key)
+        return ins.pluck(i)
+
+    def bag(self, what):
+        return __impls__[type(what)](self, what)
 
     def resolve(self, items):
-        inputs = {it.input for it in items}
-        ins = items + inputs
-        return ins.bag
-
-        # either we lokk for common nodes and start from there
-
-        # or we iter through items, and join common selectors
-        # files >> sep >> cons >> a/0
-        # \ files.map(sep)
-        #                       \.pluck(0)
-        # files >> sep >> cons >> b/1
-        # \ files.map(sep)
-        #                       \.pluck(1)
-        # = files.map(sep).pluck(0,1)
+        return db.zip(*[self.bag(it.binds) for it in items])
