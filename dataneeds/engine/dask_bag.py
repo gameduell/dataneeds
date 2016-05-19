@@ -57,10 +57,16 @@ class DaskBagEngine:
         return self.bag(cons.input)
 
     @impl
+    def both(self, both: need.Both):
+        return self.bag(both.input)
+
+    @impl
     def attr(self, attr: Attribute):
         ins = self.bag(attr.input)
+        if isinstance(ins, need.Both):
+            ins = ins.input
         i = attr.input.outputs.index(attr)
-        return ins.pluck(i)
+        return ins.pluck(i).map(attr.typ.__of__)
 
     @impl
     def key(self, key: RelationKey):

@@ -33,7 +33,7 @@ class NodeListFormat(need.Source):
     N = Node()
 
     (need.Files("dataneeds/tests/*.nlf") >>
-     need.Sep(',', 3) >>
+     need.Sep(',', 2) >>
      need.Cons(N.id,
                N.label,
                need.Sep(',') >> need.Each(N.edges.id)))
@@ -69,6 +69,6 @@ class NodeEdgeFormat:
     E = Edge()
 
     (need.Files("dataneeds/tests/*.nef") >>
-     need.Sep(',', 3) >>
+     need.Sep(',', 2) >>
      ((N.id & E.source.id) + N.label + need.Sep(',') >> need.Each(
-         need.Sep('.') >> ((E.id & N.edges.id) + E.weight + E.target.id))))
+         need.Sep(':') >> ((E.id & N.edges.id) + E.weight + E.target.id))))

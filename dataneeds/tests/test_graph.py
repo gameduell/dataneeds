@@ -1,6 +1,8 @@
 import pytest
 
 import dataneeds as need
+from dask.async import get_sync
+from dataneeds.engine.dask_bag import DaskBagEngine
 
 
 @pytest.fixture
@@ -116,13 +118,21 @@ def test_resolve(graph):
         E.id, E.weight, E.source.label  # , E.target.label
 
     rs = E.resolve()
-    assert(len(rs) == 1)
+    assert rs
+    # assert(len(rs) == 1)
 
 
 def test_execute(graph):
     with need.request(graph.Node()) as N:
         N.id, N.label
+
+    r, _ = N.resolve()
     # N.execute()
+    e = DaskBagEngine()
+    bag = e.resolve(r)
+
+    assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
+    assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
 
 
 @pytest.mark.xfail

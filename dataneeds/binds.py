@@ -50,7 +50,7 @@ class Binds:
         return NotImplemented
 
     def __rrshift__(self, input):
-        # other >> self
+        # input >> self
         res = self.__bind__(input)
 
         if res is NotImplemented:

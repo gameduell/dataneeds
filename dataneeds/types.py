@@ -10,6 +10,14 @@ class Type(OwningDescriptor, Binds):
         super().__init__()
         self.__attrs__ = weakref.WeakKeyDictionary()
 
+    @property
+    def __of__(self):
+        name = type(self).__name__
+
+        def convert(string):
+            raise NotImplementedError("__of__ on %s" % name)
+        return convert
+
     def __add__(self, other):
         return Cons(self, other)
 
@@ -41,6 +49,10 @@ class Attribute(Owned, Type):
     def __init__(self, name, instance, owner, typ):
         super().__init__(name, instance, owner)
         self.typ = typ
+
+    @property
+    def __of__(self):
+        return self.typ.__of__
 
     def __str__(self):
         return "{owned}.{name}:{typ}".format(
@@ -77,7 +89,7 @@ class Both(Type):
 
     def __bind__(self, input):
         for typ in self.types:
-            input >> typ
+            self >> typ
 
 
 class Cons(Type):
@@ -101,6 +113,9 @@ class Cons(Type):
     def __bind__(self, input):
         for typ in self.types:
             self >> typ
+
+    def __repr__(self):
+        return 'Cons({})'.format(', '.join(map(str, self.types)))
 
 
 class Either(Type):
@@ -126,13 +141,20 @@ class Either(Type):
             self >> typ
 
 
-class Number(Type):
-    # TODO Bounds
-    pass
+class NativeType(Type):
+    __native__ = None
+
+    @property
+    def __of__(self):
+        return self.__native__
 
 
-class String(Type):
-    pass
+class Number(NativeType):
+    __native__ = int
+
+
+class String(NativeType):
+    __native__ = str
 
 
 class Regexp(Type):

@@ -19,19 +19,25 @@ class Request:
         self.items = []
 
     def resolve(self):
-        sets = defaultdict(set)
+        ss = []
+        its = defaultdict(tuple)
 
         for item in self.items:
             for b in item.resolving.bindings:
-                sets[b.source].add(b)
+                ss.append(b.source)
+                its[b.source] += (b,)
 
-        complete = set(tuple(s)
-                       for s in sets.values() if len(s) == len(self.items))
+        complete = []
+        for src in ss:
+            s = its[src]
+            if len(s) == len(self.items):
+                if s not in complete:
+                    complete.append(s)
+
         if complete:
             return complete
-
         else:
-            raise NotImplementedError("Resolve with %s" % sets)
+            raise NotImplementedError("Resolve with %s" % its)
 
     def __getattr__(self, name):
         field = getattr(self.entity, name)
