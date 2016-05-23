@@ -54,15 +54,16 @@ def test_binds():
     assert "id" in str(b)
     assert a != b
 
-    assert isinstance(a.input, need.Cons)
-    assert a.input == graph.Node.label.bindings[0].input
+    assert isinstance(a.input, need.Part)
+    assert isinstance(a.input.input, need.Cons)
+    assert a.input.input == graph.Node.label.bindings[0].input.input
 
     e = graph.Node.edges.bindings[0]
     assert isinstance(e.input, need.Each)
     assert isinstance(e.input.input, need.Sep)
-    assert a.input == e.input.input.input
+    assert a.input.input == e.input.input.input.input
 
-    assert isinstance(a.input.input, need.Sep)
+    assert isinstance(a.input.input.input, need.Sep)
 
     c = graph.Edge.source.bindings[1]
 
@@ -125,9 +126,8 @@ def test_execute():
     e = DaskBagEngine()
     bag = e.resolve(r2)
 
-    assert bag
-    # assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
-    # assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
+    assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
+    assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
 
 
 @pytest.mark.xfail

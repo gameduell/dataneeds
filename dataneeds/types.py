@@ -1,6 +1,6 @@
 import weakref
 
-from .binds import BindingsDescriptor, Binds
+from .binds import BindingsDescriptor, Binds, Part
 from .utils import Owned, OwningDescriptor
 
 
@@ -111,8 +111,8 @@ class Cons(Type):
             return Cons(other, *self.types)
 
     def __bind__(self, input):
-        for typ in self.types:
-            self >> typ
+        for i, typ in enumerate(self.types):
+            Part(self, i) >> typ
 
     def __repr__(self):
         return 'Cons({})'.format(', '.join(map(str, self.types)))
@@ -200,4 +200,5 @@ class Categorical(Type):
     def __init__(self, name):
         super().__init__()
         self.name = name
+
     # TODO fixed vs open ...

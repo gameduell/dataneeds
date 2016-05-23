@@ -61,6 +61,19 @@ class Binds:
         return Bundle(input, self) if res is None else res
 
 
+class Part(Binds):
+
+    def __init__(self, outer, id):
+        self.input = outer
+        self.id = id
+
+    def __str__(self):
+        return "{}[{}]".format(self.input, self.id)
+
+    def __repr__(self):
+        return "{!r}[{!r}]".format(self.input, self.id)
+
+
 class Bundle:
     """
     Bundling together objects after `>>`, so further binds can take place.

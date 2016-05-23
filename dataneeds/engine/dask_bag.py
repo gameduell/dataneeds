@@ -1,3 +1,5 @@
+import operator
+
 import dask.bag as db
 import dataneeds as need
 
@@ -86,16 +88,18 @@ class DaskBagEngine:
         return self.bag_of(cons.input)
 
     @impl
+    def cons_item(self, cons_item: need.Part):
+        ins = self.bag_of(cons_item.input)
+        return ins.map(operator.itemgetter(cons_item.id))
+
+    @impl
     def both(self, both: need.Both):
         return self.bag_of(both.input)
 
     @impl
     def attr(self, attr: Attribute):
         ins = self.bag_of(attr.input)
-        if isinstance(ins, need.Both):
-            ins = ins.input
-        i = attr.input.outputs.index(attr)
-        return ins.pluck(i).map(attr.typ.__of__)
+        return ins.map(attr.typ.__of__)
 
     @impl
     def key(self, key: RelationKey):
