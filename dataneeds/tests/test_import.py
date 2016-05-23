@@ -1,3 +1,4 @@
 def test_import():
     import dataneeds as need
-    return need
+    import graph
+    return need, graph

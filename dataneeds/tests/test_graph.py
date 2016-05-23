@@ -1,24 +1,12 @@
 import pytest
 
 import dataneeds as need
+import graph
 from dask.async import get_sync
 from dataneeds.engine.dask_bag import DaskBagEngine
 
 
-@pytest.fixture
-def graph():
-    import graph
-    return graph
-
-
-def test_graph():
-    import graph
-
-    assert graph.Node
-    assert graph.Edge
-
-
-def test_entities(graph):
+def test_entities():
     n = graph.Node()
     e = graph.Edge()
 
@@ -48,7 +36,7 @@ def test_entities(graph):
     assert "graph.Edge().id" in repr(n.edges.id)
 
 
-def test_binds(graph):
+def test_binds():
     assert graph.Node().id.bindings == graph.Node.id.bindings
     assert graph.Edge.id.bindings != graph.Node.id.bindings
     assert graph.Node.label.bindings != graph.Node.id.bindings
@@ -81,7 +69,7 @@ def test_binds(graph):
     assert c.input == b.input
 
 
-def test_request(graph):
+def test_request():
     with need.request(graph.Node()) as N:
         N.id, N.label, N.edges.id
 
@@ -98,7 +86,7 @@ def test_request(graph):
     assert len(N.items) == 2
 
 
-def test_resolve(graph):
+def test_resolve():
     with need.request(graph.Node()) as N:
         N.id, N.label
     rs = N.resolve()
@@ -122,17 +110,24 @@ def test_resolve(graph):
     # assert(len(rs) == 1)
 
 
-def test_execute(graph):
+def test_execute():
     with need.request(graph.Node()) as N:
         N.id, N.label
 
-    r, _ = N.resolve()
+    r1, r2 = N.resolve()
     # N.execute()
     e = DaskBagEngine()
-    bag = e.resolve(r)
+    bag = e.resolve(r1)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
     assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
+
+    e = DaskBagEngine()
+    bag = e.resolve(r2)
+
+    assert bag
+    # assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
+    # assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
 
 
 @pytest.mark.xfail
