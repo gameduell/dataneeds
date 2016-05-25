@@ -55,6 +55,10 @@ class Request:
 
 class Item:
 
+    def __init__(self, request, *args, **kws):
+        super().__init__(*args, **kws)
+        self.request = request
+
     def __iter__(self):
         return iter((IterItem(self),))
 
@@ -62,7 +66,7 @@ class Item:
 class AttrItem(Item):
 
     def __init__(self, request, attr):
-        self.request = request
+        super().__init__(request)
         self.attr = attr
 
     @property
@@ -73,26 +77,29 @@ class AttrItem(Item):
 class RelationItem(Item):
 
     def __init__(self, request, rel):
-        self.request = request
+        super().__init__(request)
         self.rel = rel
         self.item = None
 
     @property
     def resolving(self):
-        return self.rel
+        return self.item.resolving
 
     def __getattr__(self, name):
-        field = getattr(self.rel.towards, name)
-
-        if isinstance(field, Attribute):
-            item = AttrItem(self, field)
-        elif isinstance(field, Relation):
-            item = RelationItem(self, field)
-        else:
-            raise ValueError("Don't know how to request a %r" % type(field))
-
-        self.item = item
+        ref = getattr(self.rel, name)
+        self.item = item = ReferenceItem(self.request, ref)
         return item
+
+
+class ReferenceItem(Item):
+
+    def __init__(self, request, ref):
+        super().__init__(request)
+        self.ref = ref
+
+    @property
+    def resolving(self):
+        return self.ref
 
 
 class IterItem(Item):

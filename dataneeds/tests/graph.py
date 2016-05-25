@@ -2,7 +2,7 @@ import dataneeds as need
 
 
 class Node(need.Entity):
-    id = need.Number()
+    id = need.Integer()
     label = need.String()
 
     @need.relate
@@ -11,8 +11,8 @@ class Node(need.Entity):
 
 
 class Edge(need.Entity):
-    id = need.Number()
-    weight = need.Number()
+    id = need.Integer()
+    weight = need.Floating()
 
     @need.relate
     def source():
@@ -70,5 +70,10 @@ class NodeEdgeFormat:
 
     (need.Files("dataneeds/tests/*.nef") >>
      need.Sep(',', 2) >>
-     ((N.id & E.source.id) + N.label + need.Sep(',') >> need.Each(
-         need.Sep(':') >> ((E.id & N.edges.id) + E.weight + E.target.id))))
+     need.Cons(N.id & E.source.id,
+               N.label & E.source.label,
+               need.Sep(',') >> need.Each(
+                   need.Sep(':') >> need.Cons(
+                       E.id & N.edges.id,
+                       E.weight,
+                       E.target.id))))

@@ -33,7 +33,6 @@ class Entity(OwningDescriptor, metaclass=EntityMeta):
 
     def __init__(self):
         super().__init__()
-        self.bindings = {}
 
     def __owned__(self, name, instance, owner):
         return Relation(name, instance, owner, self, {})
@@ -48,8 +47,6 @@ class Entity(OwningDescriptor, metaclass=EntityMeta):
 class Relation(Owned):
     """Relation definition towards another object."""
 
-    bindings = BindingsDescriptor()
-
     def __init__(self, name, instance, owner, towards, cardinality={}):
         super().__init__(name, instance, owner)
         self.towards = towards
@@ -60,7 +57,7 @@ class Relation(Owned):
         if not isinstance(attr, Owned):
             raise AttributeError("No access to {!r} ({}) through relations."
                                  .format(name, type(attr).__name__))
-        rel = RelationKey(self, name, attr)
+        rel = Reference(self, name, attr)
         setattr(self, name, rel)
         return rel
 
@@ -97,16 +94,18 @@ class RelationAnnotation(OwningDescriptor):
 relate = RelationAnnotation
 
 
-class RelationKey(Type, Binds):
+class Reference(Owned, Type, Binds):
     """Reference to a key of a related entity."""
 
+    bindings = BindingsDescriptor()
+
     def __init__(self, rel, name, attr):
+        super().__init__(name, rel, getattr(rel.owner, rel.name))
         self.rel = rel
-        self.name = name
         self.attr = attr
 
     def __bind__(self, input):
-        self.rel.bindings.add(self)
+        self.bindings.add(self)
 
     def __str__(self):
         return "{rel!s}.{name}".format(rel=self.rel, name=self.name)

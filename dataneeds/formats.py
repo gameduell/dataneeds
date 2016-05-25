@@ -11,17 +11,6 @@ class Format(Binds):
         return ()
 
 
-class SubFormat(Format):
-
-    def __init__(self, fmt, sub, out):
-        self.fmt = fmt
-        self.sub = sub
-        self.out = out
-
-    def __bind__(self, input):
-        ...
-
-
 class Either(Format):
 
     def __init__(self, *formats):
@@ -78,7 +67,7 @@ class Re(Format):
 
 class Sep(Format):
 
-    def __init__(self, sep=',', limit=0):
+    def __init__(self, sep=',', limit=-1):
         self.sep = sep
         self.limit = limit
 

@@ -3,7 +3,7 @@ import operator
 import dask.bag as db
 import dataneeds as need
 
-from ..entity import RelationKey
+from ..entity import Reference
 from ..types import Attribute
 
 __impls__ = {}
@@ -37,19 +37,26 @@ class DaskBagEngine:
     #                   ` <<< ...
     # ... <<< Each << ..`
 
-    def __init__(self):
-        self.explodes = {}
-        self.current = None
-        self.items = []
-
     def impl(f):
         typ, = f.__annotations__.values()
         __impls__[typ] = f
 
     def resolve(self, items):
-        return db.zip(*[self.bag_of(it.binds) for it in items])
+        self.items = []
+        self.explodes = {}
+        self.current = None
+        self.bags = {}
+
+        for it in items:
+            bag = self.bag_of(it.binds)
+            self.items.append(bag)
+
+        return db.zip(*self.items)
 
     def bag_of(self, node):
+        if node in self.bags:
+            return self.bags[node]
+
         bag = __impls__[type(node)](self, node)
 
         explode = self.explodes.get(node)
@@ -60,15 +67,19 @@ class DaskBagEngine:
 
         self.explodes[node] = self.current
 
+        self.bags[node] = bag
         return bag
 
     @impl
     def each(self, each: need.Each):
         ins = self.bag_of(each.input)
 
+        print(self.items)
         self.current = ins.map(len)
-        for it in self.items:
-            db.zip(self.current, it).map(lambda n, i: [i] * n).concat()
+        self.items = [(db
+                       .zip(self.current, it)
+                       .map(lambda n, i: [i] * n)
+                       .concat()) for it in self.items]
 
         return ins.concat()
 
@@ -81,7 +92,9 @@ class DaskBagEngine:
     @impl
     def sep(self, sep: need.Sep):
         ins = self.bag_of(sep.input)
-        return ins.map(str.split, sep=sep.sep, maxsplit=sep.limit)
+        return (ins
+                .map(str.split, sep=sep.sep, maxsplit=sep.limit)
+                .map(lambda x: [] if x == [''] else x))
 
     @impl
     def cons(self, cons: need.Cons):
@@ -102,7 +115,6 @@ class DaskBagEngine:
         return ins.map(attr.typ.__of__)
 
     @impl
-    def key(self, key: RelationKey):
-        ins = self.bag_of(key.input)
-        i = key.input.outputs.index(key)
-        return ins.pluck(i)
+    def reference(self, ref: Reference):
+        ins = self.bag_of(ref.input)
+        return ins.map(ref.attr.typ.__of__)

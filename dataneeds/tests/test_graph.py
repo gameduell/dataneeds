@@ -16,19 +16,19 @@ def test_entities():
     with pytest.raises(AttributeError):
         n.edges.baz
 
-    assert isinstance(n.id.typ, need.Number)
+    assert isinstance(n.id.typ, need.Integer)
     assert isinstance(n.label.typ, need.String)
 
     assert isinstance(n.edges.towards, graph.Edge)  # XXX Relation
 
-    assert isinstance(e.id.typ, need.Number)
-    assert isinstance(e.weight.typ, need.Number)
+    assert isinstance(e.id.typ, need.Integer)
+    assert isinstance(e.weight.typ, need.Floating)
 
     assert isinstance(e.source.towards, graph.Node)  # XXX Relation
     assert isinstance(e.target.towards, graph.Node)  # XXX Relation
 
     assert "graph" in repr(n.id)
-    assert "Number" in repr(n.id)
+    assert "Integer" in repr(n.id)
     assert "Node" in repr(n.id)
     assert "id" in repr(n.id)
 
@@ -40,10 +40,10 @@ def test_binds():
     assert graph.Node().id.bindings == graph.Node.id.bindings
     assert graph.Edge.id.bindings != graph.Node.id.bindings
     assert graph.Node.label.bindings != graph.Node.id.bindings
-    assert graph.Node.edges.bindings != graph.Node.id.bindings
+    assert graph.Node.edges.id.bindings != graph.Node.id.bindings
 
     assert len(graph.Node.id.bindings) == 2
-    assert len(graph.Node.edges.bindings) == 2
+    assert len(graph.Node.edges.id.bindings) == 2
     assert len(graph.Edge.weight.bindings) == 2
 
     a, b = graph.Node.id.bindings
@@ -58,14 +58,14 @@ def test_binds():
     assert isinstance(a.input.input, need.Cons)
     assert a.input.input == graph.Node.label.bindings[0].input.input
 
-    e = graph.Node.edges.bindings[0]
+    e = graph.Node.edges.id.bindings[0]
     assert isinstance(e.input, need.Each)
     assert isinstance(e.input.input, need.Sep)
     assert a.input.input == e.input.input.input.input
 
     assert isinstance(a.input.input.input, need.Sep)
 
-    c = graph.Edge.source.bindings[1]
+    c = graph.Edge.source.id.bindings[1]
 
     assert c.input == b.input
 
@@ -104,11 +104,11 @@ def test_resolve():
     assert a[0].source != b[0].source
 
     with need.request(graph.Edge()) as E:
-        E.id, E.weight, E.source.label  # , E.target.label
+        E.id, E.weight, E.source.id, E.target.id
 
     rs = E.resolve()
     assert rs
-    # assert(len(rs) == 1)
+    assert(len(rs) == 2)
 
 
 def test_execute():
@@ -123,17 +123,28 @@ def test_execute():
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
     assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
 
-    e = DaskBagEngine()
     bag = e.resolve(r2)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
     assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
 
+    with need.request(graph.Edge()) as E:
+        E.source.label, E.weight, E.target.id
+
+    r1, = E.resolve()
+
+    bag = e.resolve(r1)
+    assert len(bag.compute()) == 5
+    nei = [('A', 0.3, 1), ('A', 0.2, 2),
+           ('B', 0.2, 0), ('B', 1.0, 1), ('B', 0.4, 2)]
+    assert bag.compute(get=get_sync) == nei
+    assert bag.compute() == nei
+
 
 @pytest.mark.xfail
-def test_resolve_join(self):
+def test_resolve_join():
     with need.request(graph.Edge()) as E:
         E.id, E.weight, E.source.label, E.target.label
 
     rs = E.resolve()
-    assert(len(rs) == 1)
+    assert(len(rs) == 2)

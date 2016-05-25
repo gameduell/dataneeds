@@ -6,8 +6,8 @@ from .utils import Owned, OwningDescriptor
 
 class Type(OwningDescriptor, Binds):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kws):
+        super().__init__(*args, **kws)
         self.__attrs__ = weakref.WeakKeyDictionary()
 
     @property
@@ -149,8 +149,12 @@ class NativeType(Type):
         return self.__native__
 
 
-class Number(NativeType):
+class Integer(NativeType):
     __native__ = int
+
+
+class Floating(NativeType):
+    __native__ = float
 
 
 class String(NativeType):
