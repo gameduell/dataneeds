@@ -116,7 +116,6 @@ def test_execute():
         N.id, N.label
 
     r1, r2 = N.resolve()
-    # N.execute()
     e = DaskBagEngine()
     bag = e.resolve(r1)
 
