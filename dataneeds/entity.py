@@ -1,5 +1,5 @@
 from .binds import BindingsDescriptor, Binds
-from .types import Type
+from .types import Attribute, Type
 from .utils import Owned, OwningDescriptor
 
 __all__ = ['Entity']
@@ -47,19 +47,38 @@ class Entity(OwningDescriptor, metaclass=EntityMeta):
 class Relation(Owned):
     """Relation definition towards another object."""
 
+    bindings = BindingsDescriptor()
+
     def __init__(self, name, instance, owner, towards, cardinality={}):
         super().__init__(name, instance, owner)
         self.towards = towards
         self.cardinality = cardinality
+        self.items = []
 
     def __getattr__(self, name):
-        attr = getattr(self.towards, name)
-        if not isinstance(attr, Owned):
+        item = None
+        obj = getattr(self.towards, name)
+        if isinstance(obj, Owned):
+            # so we have
+            # >>> class ThisEntity:
+            # ...     @relate
+            # ...     def rel():
+            # ...         return OtherEntity()
+            # >>> ThisEntity().rel.name
+            instance = self                         # Relation with instance
+            owner = getattr(self.owner, self.name)  # Relation with owner only
+
+        if isinstance(obj, (Attribute, Reference)):
+            item = Reference(name, instance, owner)
+        elif isinstance(obj, Relation):
+            item = Relation(name, instance, owner, obj)
+        else:
             raise AttributeError("No access to {!r} ({}) through relations."
-                                 .format(name, type(attr).__name__))
-        rel = Reference(self, name, attr)
-        setattr(self, name, rel)
-        return rel
+                                 .format(name, type(obj).__name__))
+
+        setattr(self, name, item)
+        self.items.append(item)
+        return item
 
     def __str__(self):
         return "{src!s}.{name}->{tgt!s}".format(
@@ -99,16 +118,16 @@ class Reference(Owned, Type, Binds):
 
     bindings = BindingsDescriptor()
 
-    def __init__(self, rel, name, attr):
-        super().__init__(name, rel, getattr(rel.owner, rel.name))
-        self.rel = rel
-        self.attr = attr
+    @property
+    def attr(self):
+        return getattr(self.instance.towards, self.name)
 
     def __bind__(self, input):
         self.bindings.add(self)
+        self.instance.bindings.add(self)
 
     def __str__(self):
-        return "{rel!s}.{name}".format(rel=self.rel, name=self.name)
+        return "{rel!s}.{name}".format(rel=self.instance, name=self.name)
 
     def __repr__(self):
-        return "{rel!r}.{name}".format(rel=self.rel, name=self.name)
+        return "{rel!r}.{name}".format(rel=self.instance, name=self.name)

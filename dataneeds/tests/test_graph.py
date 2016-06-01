@@ -69,6 +69,10 @@ def test_binds():
 
     assert c.input == b.input
 
+    from dataneeds.entity import Relation, Reference
+    assert isinstance(graph.Node.edges.target, Relation)
+    assert isinstance(graph.Node.edges.target.label, Reference)
+
 
 def test_request():
     with need.request(graph.Node()) as N:
@@ -120,30 +124,28 @@ def test_execute():
     bag = e.resolve(r1)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
-    assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
 
     bag = e.resolve(r2)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
-    assert bag.compute() == [(0, 'A'), (1, 'B'), (2, 'C')]
 
     with need.request(graph.Edge()) as E:
-        E.source.label, E.weight, E.target.id
+        E.source.id, E.target.id, E.weight
 
-    r1, = E.resolve()
+    r1, r2 = E.resolve()
 
     bag = e.resolve(r1)
-    assert len(bag.compute()) == 5
-    nei = [('A', 0.3, 1), ('A', 0.2, 2),
-           ('B', 0.2, 0), ('B', 1.0, 1), ('B', 0.4, 2)]
-    assert bag.compute(get=get_sync) == nei
-    assert bag.compute() == nei
+    expect = [(0, 1, 0.3), (0, 2, 0.2),
+              (1, 0, 0.2), (1, 1, 1.0), (1, 2, 0.4)]
+    assert bag.compute(get=get_sync) == expect
+
+    bag = e.resolve(r2)
+    assert bag.compute(get=get_sync) == expect
 
 
-@pytest.mark.xfail
 def test_resolve_join():
     with need.request(graph.Edge()) as E:
-        E.id, E.weight, E.source.label, E.target.label
+        E.source.label, E.target.label, E.weight
 
     rs = E.resolve()
-    assert(len(rs) == 2)
+    assert(len(rs) == 1)

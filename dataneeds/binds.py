@@ -25,7 +25,7 @@ class Input:
 
 
 class Outputs:
-    """Discreptor for outputs, can only be assigned once."""
+    """Discreptor for outputs, giving access to a list"""
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -135,6 +135,18 @@ class Bindings:
 
     def add(self, binds):
         self.bindings.append(Binding(binds))
+
+    def __str__(self):
+        if self.bindings:
+            return "|".join(map(str, self))
+        else:
+            return "()"
+
+    def __repr__(self):
+        if self.bindings:
+            return "+ " + "\n` ".join([repr(b) for b in self])
+        else:
+            return "()"
 
 
 class Binding:

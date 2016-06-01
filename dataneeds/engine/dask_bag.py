@@ -57,16 +57,16 @@ class Context:
 
 class DaskBagEngine:
 
-    impls = Impls()
-
-    def resolve(self, items):
+    def resolve(self, bindings):
         ctx = Context(self.impls)
 
-        for it in items:
-            bag = ctx[it.binds]
+        for b in bindings:
+            bag = ctx[b.binds]
             ctx.returns.append(bag)
 
         return db.zip(*ctx.returns)
+
+    impls = Impls()
 
     @impls
     def each(ctx, each: need.Each):
