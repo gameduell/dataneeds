@@ -33,7 +33,8 @@ def test_entities():
     assert "id" in repr(n.id)
 
     assert "graph.Node" in repr(n.edges.id)
-    assert "graph.Edge().id" in repr(n.edges.id)
+    assert "graph.Edge" in repr(n.edges.id)
+    assert "id" in repr(n.edges.id)
 
 
 def test_binds():
@@ -98,7 +99,7 @@ def test_resolve():
 
     assert(len(rs) == 2)
 
-    a, b = rs
+    (a, c), (b, d) = rs
 
     assert isinstance(a[0].source, need.Files)
     assert isinstance(b[0].source, need.Files)
@@ -106,6 +107,9 @@ def test_resolve():
     assert all(ai.source == a[0].source for ai in a)
     assert all(bi.source == b[0].source for bi in b)
     assert a[0].source != b[0].source
+
+    assert c == (None, None)
+    assert d == (None, None)
 
     with need.request(graph.Edge()) as E:
         E.id, E.weight, E.source.id, E.target.id
@@ -119,7 +123,8 @@ def test_execute():
     with need.request(graph.Node()) as N:
         N.id, N.label
 
-    r1, r2 = N.resolve()
+    (r1, j1), (r2, j1) = N.resolve()
+
     e = DaskBagEngine()
     bag = e.resolve(r1)
 
@@ -132,7 +137,7 @@ def test_execute():
     with need.request(graph.Edge()) as E:
         E.source.id, E.target.id, E.weight
 
-    r1, r2 = E.resolve()
+    (r1, j1), (r2, j2) = E.resolve()
 
     bag = e.resolve(r1)
     expect = [(0, 1, 0.3), (0, 2, 0.2),
@@ -148,4 +153,28 @@ def test_resolve_join():
         E.source.label, E.target.label, E.weight
 
     rs = E.resolve()
-    assert(len(rs) == 1)
+    assert(len(rs) == 8)
+
+    sources = set()
+
+    for rp, ((k1, js1), (k2, js2), _) in rs:
+        sr, s1, s2 = rp[0].source, k1.source, k2.source
+
+        assert _ is None
+        assert all(r.source == sr for r in rp)
+        assert all(j.source == s1 for j in js1)
+        assert all(j.source == s2 for j in js2)
+
+        sources.add((sr.pattern, s1.pattern, s2.pattern))
+
+    elf = 'dataneeds/tests/*.elf'
+    nlf = 'dataneeds/tests/*.nlf'
+    nef = 'dataneeds/tests/*.nef'
+    assert sources == {(elf, nlf, nlf),
+                       (elf, nlf, nef),
+                       (elf, nef, nlf),
+                       (elf, nef, nef),
+                       (nef, nlf, nlf),
+                       (nef, nlf, nef),
+                       (nef, nef, nlf),
+                       (nef, nef, nef)}

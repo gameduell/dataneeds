@@ -35,6 +35,7 @@ class Entity(OwningDescriptor, metaclass=EntityMeta):
         super().__init__()
 
     def __owned__(self, name, instance, owner):
+        """An Entity is a Relation when being part of another Entity."""
         return Relation(name, instance, owner, self, {})
 
     def __str__(self):
@@ -53,7 +54,6 @@ class Relation(Owned):
         super().__init__(name, instance, owner)
         self.towards = towards
         self.cardinality = cardinality
-        self.items = []
 
     def __getattr__(self, name):
         item = None
@@ -71,13 +71,13 @@ class Relation(Owned):
         if isinstance(obj, (Attribute, Reference)):
             item = Reference(name, instance, owner)
         elif isinstance(obj, Relation):
+            # XXX do we have to allow this?
             item = Relation(name, instance, owner, obj)
         else:
             raise AttributeError("No access to {!r} ({}) through relations."
                                  .format(name, type(obj).__name__))
 
         setattr(self, name, item)
-        self.items.append(item)
         return item
 
     def __str__(self):
@@ -114,7 +114,7 @@ relate = RelationAnnotation
 
 
 class Reference(Owned, Type, Binds):
-    """Reference to a key of a related entity."""
+    """Reference to an attribte of a related entity."""
 
     bindings = BindingsDescriptor()
 
