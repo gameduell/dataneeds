@@ -57,14 +57,40 @@ class Context:
 
 class DaskBagEngine:
 
-    def resolve(self, bindings):
+    def resolve(self, bindings, joins=None):
         ctx = Context(self.impls)
 
-        for b in bindings:
+        if joins is None:
+            joins = [None for _ in bindings]
+
+        adds = []
+        for i, (b, js) in enumerate(zip(bindings, joins)):
             bag = ctx[b.binds]
             ctx.returns.append(bag)
 
-        return db.zip(*ctx.returns)
+            if js is not None:
+                adds.append((i, js))
+
+        result = db.zip(*ctx.returns)
+
+        for i, js in adds:
+            add = self.resolve(js)
+
+            def flt(i):
+                return lambda ii: ii[0][i] == ii[1][0]
+
+            join = (result
+                    .product(add)   # corss product
+                    .filter(flt(i))  # join on key
+                    .map(lambda ii: ii[0] + ii[1][1:]))  # flatten
+            result = join
+
+        rm = {i for i, _ in adds}
+        if rm:
+            result = result.map(lambda ii: [d
+                                            for i, d in enumerate(ii)
+                                            if i not in rm])
+        return result
 
     impls = Impls()
 

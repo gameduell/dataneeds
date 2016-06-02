@@ -156,8 +156,7 @@ def resolve_joins(items, bindings):
         for it, b in zip(items, bs):
             if it.needs_join:
                 join = [b.binds.attr] + [i.item.attr for i in it.items]
-                binds = resolve_primary(join)
-                joins.append([(key, js) for key, *js in binds])
+                joins.append(resolve_primary(join))
             else:
                 joins.append([None])
 

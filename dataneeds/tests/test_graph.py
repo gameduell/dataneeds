@@ -155,26 +155,37 @@ def test_resolve_join():
     rs = E.resolve()
     assert(len(rs) == 8)
 
-    sources = set()
+    resolves = {}
 
-    for rp, ((k1, js1), (k2, js2), _) in rs:
-        sr, s1, s2 = rp[0].source, k1.source, k2.source
+    for rr in rs:
+        rp, (js1, js2, _) = rr
+        sr, s1, s2 = rp[0].source, js1[0].source, js2[0].source
+
+        assert len(rp) == 3
+        assert len(js1) == 2
+        assert len(js2) == 2
 
         assert _ is None
         assert all(r.source == sr for r in rp)
         assert all(j.source == s1 for j in js1)
         assert all(j.source == s2 for j in js2)
 
-        sources.add((sr.pattern, s1.pattern, s2.pattern))
+        resolves[sr.pattern, s1.pattern, s2.pattern] = rr
 
     elf = 'dataneeds/tests/*.elf'
     nlf = 'dataneeds/tests/*.nlf'
     nef = 'dataneeds/tests/*.nef'
-    assert sources == {(elf, nlf, nlf),
-                       (elf, nlf, nef),
-                       (elf, nef, nlf),
-                       (elf, nef, nef),
-                       (nef, nlf, nlf),
-                       (nef, nlf, nef),
-                       (nef, nef, nlf),
-                       (nef, nef, nef)}
+    assert set(resolves) == {(elf, nlf, nlf),
+                             (elf, nlf, nef),
+                             (elf, nef, nlf),
+                             (elf, nef, nef),
+                             (nef, nlf, nlf),
+                             (nef, nlf, nef),
+                             (nef, nef, nlf),
+                             (nef, nef, nef)}
+
+    e = DaskBagEngine()
+    bag = e.resolve(*resolves[elf, nlf, nlf])
+    expect = [('A', 'B', 0.3), ('A', 'C', 0.2),
+              ('B', 'A', 0.2), ('B', 'B', 1.0), ('B', 'C', 0.4)]
+    assert bag.compute(get=get_sync) == expect
