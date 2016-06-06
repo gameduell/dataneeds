@@ -66,7 +66,7 @@ class Relation(Owned):
             # ...         return OtherEntity()
             # >>> ThisEntity().rel.name
             instance = self                         # Relation with instance
-            owner = getattr(self.owner, self.name)  # Relation with owner only
+            owner = self.general                    # Relation with owner only
 
         if isinstance(obj, (Attribute, Reference)):
             item = Reference(name, instance, owner)

@@ -1,7 +1,8 @@
 import contextlib
-import itertools
-from collections import defaultdict
+import itertools as it
+from collections import OrderedDict, defaultdict
 
+from .binds import Bindings
 from .entity import Reference, Relation
 from .types import Attribute
 
@@ -17,11 +18,56 @@ class Request:
         self.entity = entity
         self.options = options
 
-        self.items = []
+        self.returns = []
 
-    def resolve(self):
-        bindings = resolve_primary(self.items)
-        return list(resolve_joins(self.items, bindings))
+    def returning(self, by, item):
+        if self.returns[-1:] == [by]:
+            self.returns.pop(-1)
+        self.returns.append(item)
+        return item
+
+    def resolve_bindings(self, bindings):
+        """
+        Group bindings list by there source.
+
+        :param bindings: list of Bindings for some itmes
+        :returns: OrderedDcit from source to list of Binding
+        """
+        resolved = OrderedDict()
+
+        for bs in bindings:
+            for b in bs:
+                resolved.setdefault(b.source, []).append(b)
+
+        return OrderedDict((s, bs)
+                           for s, bs in resolved.items()
+                           if len(bs) == len(bindings))
+
+    def resolve_primary(self):
+        return self.resolve_bindings([it.primary for it in self.returns])
+
+    def resolve_joins(self):
+        joins = defaultdict(list)
+
+        for ret in self.returns:
+            if ret.joins:
+                for p in ret.primary:
+                    if p.binds.general != ret.item.general:
+                        joins[p].append(ret)
+
+        return {p: self.resolve_bindings([p.binds.attr.bindings] +
+                                         [it.joins for it in its])
+                for p, its in joins.items()}
+
+    def resolve_combined(self):
+        ps = self.resolve_primary()
+        joins = self.resolve_joins()
+
+        return OrderedDict(((s,) + tuple(j[0] for j in js),
+                            (bs,) + tuple(j[1] for j in js))
+                           for s, bs in ps.items()
+                           for js in it.product(*[joins[b].items()
+                                                  for b in bs if b in joins]))
 
     def __getattr__(self, name):
         field = getattr(self.entity, name)
@@ -33,13 +79,10 @@ class Request:
         else:
             raise ValueError("Don't know how to request a %r" % type(field))
 
-        self.items.append(item)
-        setattr(self, name, item)
-        return item
+        return self.returning(None, item)
 
 
 class Item:
-    needs_join = False
 
     def __init__(self, request, item, *args, **kws):
         super().__init__(*args, **kws)
@@ -47,8 +90,12 @@ class Item:
         self.item = item
 
     @property
-    def bindings(self):
+    def primary(self):
         return self.item.bindings
+
+    @property
+    def joins(self):
+        return Bindings()
 
     def __iter__(self):
         return iter((IterItem(self),))
@@ -75,29 +122,14 @@ class RelationItem(Item):
     def __getattr__(self, name):
         ref = getattr(self.item, name)
         if isinstance(ref, Reference):
-            item = ReferenceItem(self.request, ref)
+            item = ReferenceItem(self.request, ref, self)
         elif isinstance(ref, Relation):
             item = RelationItem(self.request, ref)
         else:
             raise AttributeError('No request to {} ({}) through relations'
                                  .format(name, type(ref)))
 
-        self.items.append(item)
-        setattr(self, name, item)
-        return item
-
-    @property
-    def needs_join(self):
-        it, *its = self.items
-        return its or not it.bindings
-
-    @property
-    def bindings(self):
-        it, *its = self.items
-        if not self.needs_join:
-            return it.bindings
-        else:
-            return super().bindings
+        return self.request.returning(self, item)
 
     def __repr__(self):
         return super().__repr__() + str(self.items)
@@ -105,8 +137,17 @@ class RelationItem(Item):
 
 class ReferenceItem(Item):
 
-    def __init__(self, request, ref):
+    def __init__(self, request, ref, parent):
         super().__init__(request, ref)
+        self.parent = parent
+
+    @property
+    def primary(self):
+        return self.parent.primary
+
+    @property
+    def joins(self):
+        return self.item.attr.bindings
 
 
 class IterItem(Item):
@@ -125,40 +166,3 @@ class IterItem(Item):
                              "use simple things like `sum(Entity.attr)` only")
         self.op = 'sum'
         return self
-
-
-def resolve_primary(items):
-    """
-    Reslove primary bindings for items, without joins.
-
-    :return: list of binding
-    """
-    ss = []
-    bs = defaultdict(list)
-
-    for it in items:
-        for b in it.bindings:
-            if b.source not in ss:
-                ss.append(b.source)
-            bs[b.source].append(b)
-
-    return [bs[s] for s in ss if len(bs[s]) == len(items)]
-
-
-def resolve_joins(items, bindings):
-    """
-    Reslove bindings for joins aligned to bindings.
-
-    :return: list of list of joins
-    """
-    for bs in bindings:
-        joins = []
-        for it, b in zip(items, bs):
-            if it.needs_join:
-                join = [b.binds.attr] + [i.item.attr for i in it.items]
-                joins.append(resolve_primary(join))
-            else:
-                joins.append([None])
-
-        for js in itertools.product(*joins):
-            yield bs, js

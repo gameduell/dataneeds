@@ -46,5 +46,9 @@ class Owned:
         self.instance = instance
 
     @property
+    def general(self):
+        return getattr(self.owner, self.name)
+
+    @property
     def owned(self):
         return self.instance or self.owner

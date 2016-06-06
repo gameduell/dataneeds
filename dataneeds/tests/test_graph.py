@@ -79,72 +79,71 @@ def test_request():
     with need.request(graph.Node()) as N:
         N.id, N.label, N.edges.id
 
-    assert len(N.items) == 3
+    assert len(N.returns) == 3
 
     with need.request(graph.Edge()) as E:
         E.id, E.weight, E.source.label, E.target.label
 
-    assert len(E.items) == 4
+    assert len(E.returns) == 4
 
     with need.request(graph.Node()) as N:
         N.label, sum(N.edges.weight)
 
-    assert len(N.items) == 2
+    assert len(N.returns) == 2
 
 
 def test_resolve():
     with need.request(graph.Node()) as N:
         N.id, N.label
-    rs = N.resolve()
+    rs = N.resolve_primary()
 
     assert(len(rs) == 2)
 
-    (a, c), (b, d) = rs
+    (s0, bs0), (s1, bs1) = rs.items()
 
-    assert isinstance(a[0].source, need.Files)
-    assert isinstance(b[0].source, need.Files)
+    assert isinstance(s0, need.Files)
+    assert isinstance(s1, need.Files)
+    assert s0 != s1
 
-    assert all(ai.source == a[0].source for ai in a)
-    assert all(bi.source == b[0].source for bi in b)
-    assert a[0].source != b[0].source
+    assert all(b.source == s0 for b in bs0)
+    assert all(b.source == s1 for b in bs1)
 
-    assert c == (None, None)
-    assert d == (None, None)
+    assert N.resolve_joins() == {}
 
     with need.request(graph.Edge()) as E:
         E.id, E.weight, E.source.id, E.target.id
 
-    rs = E.resolve()
-    assert rs
+    rs = E.resolve_primary()
     assert(len(rs) == 2)
+    assert E.resolve_joins() == {}
 
 
 def test_execute():
     with need.request(graph.Node()) as N:
         N.id, N.label
 
-    (r1, j1), (r2, j1) = N.resolve()
+    r1, r2 = N.resolve_primary().values()
 
     e = DaskBagEngine()
-    bag = e.resolve(r1)
+    bag = e.resolve(N.returns, r1)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
 
-    bag = e.resolve(r2)
+    bag = e.resolve(N.returns, r2)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
 
     with need.request(graph.Edge()) as E:
         E.source.id, E.target.id, E.weight
 
-    (r1, j1), (r2, j2) = E.resolve()
+    r1, r2 = E.resolve_primary().values()
 
-    bag = e.resolve(r1)
+    bag = e.resolve(E.returns, r1)
     expect = [(0, 1, 0.3), (0, 2, 0.2),
               (1, 0, 0.2), (1, 1, 1.0), (1, 2, 0.4)]
     assert bag.compute(get=get_sync) == expect
 
-    bag = e.resolve(r2)
+    bag = e.resolve(E.returns, r2)
     assert bag.compute(get=get_sync) == expect
 
 
@@ -152,40 +151,47 @@ def test_resolve_join():
     with need.request(graph.Edge()) as E:
         E.source.label, E.target.label, E.weight
 
-    rs = E.resolve()
-    assert(len(rs) == 8)
+    ps = E.resolve_primary()
+    assert(len(ps) == 2)
 
-    resolves = {}
+    p1, p2 = ps.values()
+    assert p1[0].binds.general == graph.Edge.source.id
+    assert p1[1].binds.general == graph.Edge.target.id
+    assert p1[2].binds.general == graph.Edge.weight
 
-    for rr in rs:
-        rp, (js1, js2, _) = rr
-        sr, s1, s2 = rp[0].source, js1[0].source, js2[0].source
+    joins = E.resolve_joins()
 
-        assert len(rp) == 3
-        assert len(js1) == 2
-        assert len(js2) == 2
+    assert len(joins) == 4
 
-        assert _ is None
-        assert all(r.source == sr for r in rp)
-        assert all(j.source == s1 for j in js1)
-        assert all(j.source == s2 for j in js2)
+    assert all(len(js) == 2 for js in joins.values())
+    assert all(len(js) == 2 for js in joins.values())
 
-        resolves[sr.pattern, s1.pattern, s2.pattern] = rr
+    js0, js1 = joins[p1[0]].values()
+
+    assert js0[0].binds.general == graph.Node.id
+    assert js0[1].binds.general == graph.Node.label
+
+    rs = E.resolve_combined()
+
+    assert len(rs) == 8
+
+    lookup = {(s.pattern, ja.pattern, jb.pattern): rr
+              for (s, ja, jb), rr in rs.items()}
 
     elf = 'dataneeds/tests/*.elf'
     nlf = 'dataneeds/tests/*.nlf'
     nef = 'dataneeds/tests/*.nef'
-    assert set(resolves) == {(elf, nlf, nlf),
-                             (elf, nlf, nef),
-                             (elf, nef, nlf),
-                             (elf, nef, nef),
-                             (nef, nlf, nlf),
-                             (nef, nlf, nef),
-                             (nef, nef, nlf),
-                             (nef, nef, nef)}
+    assert set(lookup.keys()) == {(elf, nlf, nlf),
+                                  (elf, nlf, nef),
+                                  (elf, nef, nlf),
+                                  (elf, nef, nef),
+                                  (nef, nlf, nlf),
+                                  (nef, nlf, nef),
+                                  (nef, nef, nlf),
+                                  (nef, nef, nef)}
 
     e = DaskBagEngine()
-    bag = e.resolve(*resolves[elf, nlf, nlf])
+    bag = e.resolve(*lookup[elf, nlf, nlf])
     expect = [('A', 'B', 0.3), ('A', 'C', 0.2),
               ('B', 'A', 0.2), ('B', 'B', 1.0), ('B', 'C', 0.4)]
     assert bag.compute(get=get_sync) == expect

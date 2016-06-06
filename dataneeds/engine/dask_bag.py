@@ -57,14 +57,17 @@ class Context:
 
 class DaskBagEngine:
 
-    def resolve(self, bindings, joins=None):
+    def resolve(self, returns, primary, *joins):
         ctx = Context(self.impls)
 
-        if joins is None:
-            joins = [None for _ in bindings]
+        for p in primary:
+            bag = ctx[p.binds]
+            ctx.returns.append(bag)
+
+        return db.zip(*ctx.returns)
 
         adds = []
-        for i, (b, js) in enumerate(zip(bindings, joins)):
+        for i, (b, js) in enumerate(zip(primary, joins)):
             bag = ctx[b.binds]
             ctx.returns.append(bag)
 
