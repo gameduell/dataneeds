@@ -94,9 +94,6 @@ class DaskBagEngine:
 
         ri = [rix[r.item.general] for r in returns]
 
-        print(ri)
-        print(base.compute())
-
         return base.map(lambda ii: tuple(ii[n][m] for n, m in ri))
 
         for p in primary:

@@ -18,12 +18,12 @@ class Request:
         self.entity = entity
         self.options = options
 
-        self.returns = []
+        self.items = []
 
     def returning(self, by, item):
-        if self.returns[-1:] == [by]:
-            self.returns.pop(-1)
-        self.returns.append(item)
+        if self.items[-1:] == [by]:
+            self.items.pop(-1)
+        self.items.append(item)
         return item
 
     def resolve_bindings(self, bindings):
@@ -44,12 +44,15 @@ class Request:
                            if len(bs) == len(bindings))
 
     def resolve_primary(self):
-        return self.resolve_bindings([it.primary for it in self.returns])
+        its = set()
+        ps = [its.add(it.primary) or it.primary
+              for it in self.items if it.primary not in its]
+        return self.resolve_bindings(ps)
 
     def resolve_joins(self):
         joins = defaultdict(list)
 
-        for ret in self.returns:
+        for ret in self.items:
             if ret.joins:
                 for p in ret.primary:
                     if p.binds.general != ret.item.general:

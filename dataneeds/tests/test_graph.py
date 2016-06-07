@@ -79,17 +79,17 @@ def test_request():
     with need.request(graph.Node()) as N:
         N.id, N.label, N.edges.id
 
-    assert len(N.returns) == 3
+    assert len(N.items) == 3
 
     with need.request(graph.Edge()) as E:
         E.id, E.weight, E.source.label, E.target.label
 
-    assert len(E.returns) == 4
+    assert len(E.items) == 4
 
     with need.request(graph.Node()) as N:
         N.label, sum(N.edges.weight)
 
-    assert len(N.returns) == 2
+    assert len(N.items) == 2
 
 
 def test_resolve():
@@ -126,11 +126,11 @@ def test_execute():
     r1, r2 = N.resolve_primary().values()
 
     e = DaskBagEngine()
-    bag = e.resolve(N.returns, r1)
+    bag = e.resolve(N.items, r1)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
 
-    bag = e.resolve(N.returns, r2)
+    bag = e.resolve(N.items, r2)
 
     assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
 
@@ -139,12 +139,12 @@ def test_execute():
 
     r1, r2 = E.resolve_primary().values()
 
-    bag = e.resolve(E.returns, r1)
+    bag = e.resolve(E.items, r1)
     expect = [(0, 1, 0.3), (0, 2, 0.2),
               (1, 0, 0.2), (1, 1, 1.0), (1, 2, 0.4)]
     assert bag.compute(get=get_sync) == expect
 
-    bag = e.resolve(E.returns, r2)
+    bag = e.resolve(E.items, r2)
     assert bag.compute(get=get_sync) == expect
 
 
@@ -196,7 +196,30 @@ def test_resolve_join():
     assert len(js) == 2
 
     e = DaskBagEngine()
-    bag = e.resolve(E.returns, r, js)
+    bag = e.resolve(E.items, r, js)
     expect = [('A', 'B', 0.3), ('A', 'C', 0.2),
               ('B', 'A', 0.2), ('B', 'B', 1.0), ('B', 'C', 0.4)]
+    assert bag.compute(get=get_sync) == expect
+
+    r, js = lookup[elf, nlf, nlf]
+
+    for r, js in lookup.values():
+        assert bag.compute(get=get_sync) == expect
+
+
+def test_resolve_join_same():
+    with need.request(graph.Edge()) as E:
+        E.id, E.source.id, E.source.label, E.weight
+
+    rs = E.resolve_combined()
+    assert len(rs) == 4
+
+    (r, js), *_ = rs.values()
+
+    e = DaskBagEngine()
+    bag = e.resolve(E.items, r, js)
+
+    expect = [(0, 0, 'A', 0.3), (1, 0, 'A', 0.2),
+              (2, 1, 'B', 0.2), (3, 1, 'B', 1.0), (4, 1, 'B', 0.4)]
+
     assert bag.compute(get=get_sync) == expect
