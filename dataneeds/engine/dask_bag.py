@@ -57,43 +57,52 @@ class Context:
 
 class DaskBagEngine:
 
-    def resolve(self, returns, primary, *joins):
+    def resolve(self, returns, primary, joins={}):
         ctx = Context(self.impls)
+
+        rix = {}
+
+        for i, p in enumerate(primary):
+            bag = ctx[p.binds]
+            ctx.returns.append(bag)
+            rix[p.binds.general] = 0, i
+
+        base = db.zip(*ctx.returns)
+
+        if joins:
+            base = base.map(lambda x: (x,))
+        else:
+            return base
+
+        for n, (p, (ks, js)) in enumerate(joins.items()):
+            for m, k in enumerate(ks):
+                rix[k.item.general] = n + 1, m + 1
+
+            add = self.resolve(None, js)
+
+            def fltr(i):
+                return lambda ii: ii[0][0][i] == ii[1][0]
+
+            def fltn():
+                return lambda ii: ii[0] + (ii[1],)
+
+            i = primary.index(p)
+            base = (base
+                    .product(add)
+                    .filter(fltr(i))
+                    .map(fltn()))
+
+        ri = [rix[r.item.general] for r in returns]
+
+        print(ri)
+        print(base.compute())
+
+        return base.map(lambda ii: tuple(ii[n][m] for n, m in ri))
 
         for p in primary:
             bag = ctx[p.binds]
-            ctx.returns.append(bag)
 
         return db.zip(*ctx.returns)
-
-        adds = []
-        for i, (b, js) in enumerate(zip(primary, joins)):
-            bag = ctx[b.binds]
-            ctx.returns.append(bag)
-
-            if js is not None:
-                adds.append((i, js))
-
-        result = db.zip(*ctx.returns)
-
-        for i, js in adds:
-            add = self.resolve(js)
-
-            def flt(i):
-                return lambda ii: ii[0][i] == ii[1][0]
-
-            join = (result
-                    .product(add)   # corss product
-                    .filter(flt(i))  # join on key
-                    .map(lambda ii: ii[0] + ii[1][1:]))  # flatten
-            result = join
-
-        rm = {i for i, _ in adds}
-        if rm:
-            result = result.map(lambda ii: [d
-                                            for i, d in enumerate(ii)
-                                            if i not in rm])
-        return result
 
     impls = Impls()
 

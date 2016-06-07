@@ -114,7 +114,8 @@ def test_resolve():
         E.id, E.weight, E.source.id, E.target.id
 
     rs = E.resolve_primary()
-    assert(len(rs) == 2)
+    assert all(len(r) == 4 for r in rs.values())
+    assert len(rs) == 2
     assert E.resolve_joins() == {}
 
 
@@ -166,7 +167,7 @@ def test_resolve_join():
     assert all(len(js) == 2 for js in joins.values())
     assert all(len(js) == 2 for js in joins.values())
 
-    js0, js1 = joins[p1[0]].values()
+    js0, js1 = joins[p1[0]][1].values()
 
     assert js0[0].binds.general == graph.Node.id
     assert js0[1].binds.general == graph.Node.label
@@ -190,8 +191,12 @@ def test_resolve_join():
                                   (nef, nef, nlf),
                                   (nef, nef, nef)}
 
+    r, js = lookup[elf, nlf, nlf]
+
+    assert len(js) == 2
+
     e = DaskBagEngine()
-    bag = e.resolve(*lookup[elf, nlf, nlf])
+    bag = e.resolve(E.returns, r, js)
     expect = [('A', 'B', 0.3), ('A', 'C', 0.2),
               ('B', 'A', 0.2), ('B', 'B', 1.0), ('B', 'C', 0.4)]
     assert bag.compute(get=get_sync) == expect

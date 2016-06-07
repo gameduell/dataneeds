@@ -55,19 +55,26 @@ class Request:
                     if p.binds.general != ret.item.general:
                         joins[p].append(ret)
 
-        return {p: self.resolve_bindings([p.binds.attr.bindings] +
-                                         [it.joins for it in its])
+        return {p: (its, self.resolve_bindings([p.binds.attr.bindings] +
+                                               [it.joins for it in its]))
                 for p, its in joins.items()}
 
     def resolve_combined(self):
-        ps = self.resolve_primary()
+        primary = self.resolve_primary()
         joins = self.resolve_joins()
 
-        return OrderedDict(((s,) + tuple(j[0] for j in js),
-                            (bs,) + tuple(j[1] for j in js))
-                           for s, bs in ps.items()
-                           for js in it.product(*[joins[b].items()
-                                                  for b in bs if b in joins]))
+        combine = {}
+
+        for s, ps in primary.items():
+            pjs = [p for p in ps if p in joins]
+
+            jks = it.product(*[joins[p][1].keys() for p in pjs])
+            for ks in jks:
+                ck = (s,) + ks
+                combine[ck] = ps, {p: (joins[p][0], joins[p][1][k])
+                                   for p, k in zip(pjs, ks)}
+
+        return combine
 
     def __getattr__(self, name):
         field = getattr(self.entity, name)
