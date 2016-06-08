@@ -99,9 +99,9 @@ class Json(Format):
 
 class Files(Format):
 
-    def __init__(self, pattern, compression='infer'):
+    def __init__(self, pattern, **opts):
         self.pattern = pattern
-        self.compression = compression
+        self.opts = opts
 
     def __str__(self):
         return self.pattern

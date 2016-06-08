@@ -13,16 +13,13 @@ class Type(OwningDescriptor, Binds):
     @property
     def __of__(self):
         name = type(self).__name__
-
-        def convert(string):
-            raise NotImplementedError("__of__ on %s" % name)
-        return convert
+        raise NotImplementedError("__of__ on %s" % name)
 
     def __add__(self, other):
         return Cons(self, other)
 
     def __and__(self, other):
-        return Both(self, other)
+        return All(self, other)
 
     def __or__(self, other):
         return Either(self, other)
@@ -81,7 +78,7 @@ class Optional(Type):
         self.inner = inner
 
 
-class Both(Type):
+class All(Type):
 
     def __init__(self, *types):
         super().__init__()
@@ -170,8 +167,22 @@ class Regexp(Type):
 
 
 class Timestamp(Type):
-    # TODO formats
-    pass
+
+    def __init__(self, unit='ms'):
+        super().__init__()
+        self.unit = unit
+
+    @property
+    def __of__(self):
+        import pandas as pd
+        unit = self.unit
+
+        def of(ts):
+            try:
+                return pd.Timestamp(int(ts), unit=unit)
+            except ValueError:
+                return pd.Timestamp(ts)
+        return of
 
 
 class List(Type):

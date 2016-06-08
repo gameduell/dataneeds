@@ -66,7 +66,7 @@ class Request:
         primary = self.resolve_primary()
         joins = self.resolve_joins()
 
-        combine = {}
+        combine = OrderedDict()
 
         for s, ps in primary.items():
             pjs = [p for p in ps if p in joins]
@@ -74,8 +74,9 @@ class Request:
             jks = it.product(*[joins[p][1].keys() for p in pjs])
             for ks in jks:
                 ck = (s,) + ks
-                combine[ck] = ps, {p: (joins[p][0], joins[p][1][k])
-                                   for p, k in zip(pjs, ks)}
+                combine[ck] = (ps,
+                               OrderedDict((p, (joins[p][0], joins[p][1][k]))
+                                           for p, k in zip(pjs, ks)))
 
         return combine
 

@@ -111,7 +111,7 @@ class DaskBagEngine:
     @impls
     def files(ctx, files: need.Files):
         return (db
-                .from_filenames(files.pattern, compression=files.compression)
+                .from_filenames(files.pattern, **files.opts)
                 .map(str.strip))
 
     @impls
@@ -129,7 +129,7 @@ class DaskBagEngine:
         return ctx[part.input].map(operator.itemgetter(part.id))
 
     @impls
-    def both(ctx, both: need.Both):
+    def both(ctx, both: need.All):
         return ctx[both.input]
 
     @impls

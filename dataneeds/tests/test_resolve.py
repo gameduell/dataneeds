@@ -2,8 +2,6 @@ import pytest
 
 import dataneeds as need
 import graph
-from dask.async import get_sync
-from dataneeds.engine.dask_bag import DaskBagEngine
 
 
 def test_entities():
@@ -119,35 +117,6 @@ def test_resolve():
     assert E.resolve_joins() == {}
 
 
-def test_execute():
-    with need.request(graph.Node()) as N:
-        N.id, N.label
-
-    r1, r2 = N.resolve_primary().values()
-
-    e = DaskBagEngine()
-    bag = e.resolve(N.items, r1)
-
-    assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
-
-    bag = e.resolve(N.items, r2)
-
-    assert bag.compute(get=get_sync) == [(0, 'A'), (1, 'B'), (2, 'C')]
-
-    with need.request(graph.Edge()) as E:
-        E.source.id, E.target.id, E.weight
-
-    r1, r2 = E.resolve_primary().values()
-
-    bag = e.resolve(E.items, r1)
-    expect = [(0, 1, 0.3), (0, 2, 0.2),
-              (1, 0, 0.2), (1, 1, 1.0), (1, 2, 0.4)]
-    assert bag.compute(get=get_sync) == expect
-
-    bag = e.resolve(E.items, r2)
-    assert bag.compute(get=get_sync) == expect
-
-
 def test_resolve_join():
     with need.request(graph.Edge()) as E:
         E.source.label, E.target.label, E.weight
@@ -195,17 +164,6 @@ def test_resolve_join():
 
     assert len(js) == 2
 
-    e = DaskBagEngine()
-    bag = e.resolve(E.items, r, js)
-    expect = [('A', 'B', 0.3), ('A', 'C', 0.2),
-              ('B', 'A', 0.2), ('B', 'B', 1.0), ('B', 'C', 0.4)]
-    assert bag.compute(get=get_sync) == expect
-
-    r, js = lookup[elf, nlf, nlf]
-
-    for r, js in lookup.values():
-        assert bag.compute(get=get_sync) == expect
-
 
 def test_resolve_join_same():
     with need.request(graph.Edge()) as E:
@@ -213,13 +171,3 @@ def test_resolve_join_same():
 
     rs = E.resolve_combined()
     assert len(rs) == 4
-
-    (r, js), *_ = rs.values()
-
-    e = DaskBagEngine()
-    bag = e.resolve(E.items, r, js)
-
-    expect = [(0, 0, 'A', 0.3), (1, 0, 'A', 0.2),
-              (2, 1, 'B', 0.2), (3, 1, 'B', 1.0), (4, 1, 'B', 0.4)]
-
-    assert bag.compute(get=get_sync) == expect

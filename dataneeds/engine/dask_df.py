@@ -1,7 +1,6 @@
 import dask.dataframe as df
-
-import declares as dc
-import declares.formats as fmt
+import dataneeds as dc
+import dataneeds.formats as fmt
 
 
 class CsvFiles:
@@ -9,6 +8,7 @@ class CsvFiles:
 
 
 class DataFrame:
+
     def confirm(self, columns=None, dtypes=None):
         pass
 
