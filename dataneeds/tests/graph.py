@@ -70,10 +70,10 @@ class NodeEdgeFormat:
 
     (need.Files("dataneeds/tests/*.nef") >>
      need.Sep(',', 2) >>
-     need.Cons(N.id & E.source.id,
-               N.label,  # & E.source.label,
+     need.Cons(N.id / E.source.id,
+               N.label,
                need.Sep(',') >> need.Each(
                    need.Sep(':') >> need.Cons(
-                       E.id & N.edges.id,
-                       E.weight,  # & N.edges.weight,
+                       E.id / N.edges.id,
+                       E.weight,
                        E.target.id))))

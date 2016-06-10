@@ -1,5 +1,7 @@
 import operator
 
+import toolz
+
 import dask.bag as db
 import dataneeds as need
 
@@ -55,6 +57,16 @@ class Context:
                          .concat()) for it in self.returns]
 
 
+class InnerBag:
+
+    def __init__(self, outer):
+        self.outer = outer
+
+    def map(self, f, **kws):
+        f = toolz.curry(f, **kws)
+        return InnerBag(self.outer.map(lambda inner: map(f, inner)))
+
+
 class DaskBagEngine:
 
     def resolve(self, returns, primary, joins={}):
@@ -64,6 +76,8 @@ class DaskBagEngine:
 
         for i, p in enumerate(primary):
             bag = ctx[p.binds]
+            if hasattr(bag, 'outer'):
+                bag = bag.outer
             ctx.returns.append(bag)
             rix[p.binds.general] = 0, i
 
@@ -105,8 +119,14 @@ class DaskBagEngine:
 
     @impls
     def each(ctx, each: need.Each):
-        ctx.add_explode(ctx[each.input])
-        return ctx[each.input].concat()
+        return ctx[each.inner].outer
+
+    @impls
+    def each_part(ctx, part: need.Part[need.Each]):
+        each = part.input
+        return InnerBag(ctx[each.input])
+        # ctx.add_explode(ctx[each.input])
+        # return ctx[each.input].concat()
 
     @impls
     def files(ctx, files: need.Files):
@@ -115,21 +135,22 @@ class DaskBagEngine:
                 .map(str.strip))
 
     @impls
+    def here(ctx, here: need.Here):
+        return db.from_sequence(here.content)
+
+    @impls
     def sep(ctx, sep: need.Sep):
         return (ctx[sep.input]
                 .map(str.split, sep=sep.sep, maxsplit=sep.limit)
                 .map(lambda x: [] if x == [''] else x))
 
     @impls
-    def cons(ctx, cons: need.Cons):
-        return ctx[cons.input]
+    def cons(ctx, part: need.Part[need.Cons]):
+        cons = part.input
+        return ctx[cons.input].map(operator.itemgetter(part.id))
 
     @impls
-    def part(ctx, part: need.Part):
-        return ctx[part.input].map(operator.itemgetter(part.id))
-
-    @impls
-    def both(ctx, both: need.All):
+    def both(ctx, both: need.Same):
         return ctx[both.input]
 
     @impls

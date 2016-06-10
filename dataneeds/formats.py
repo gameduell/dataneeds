@@ -1,4 +1,4 @@
-from .binds import Binds
+from .binds import Binds, Part
 
 
 class Format(Binds):
@@ -32,12 +32,13 @@ class Either(Format):
 
 
 class Each(Format):
+    __outputs__ = None
 
     def __init__(self, inner):
         self.inner = inner
 
     def __bind__(self, input):
-        self >> self.inner
+        Part[Each](self, None) >> self.inner
 
     def __str__(self):
         return "Each"
@@ -112,3 +113,9 @@ class Files(Format):
     @property
     def __out__(self):
         return str
+
+
+class Here(Format):
+
+    def __init__(self, *content):
+        self.content = content

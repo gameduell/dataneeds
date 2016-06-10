@@ -58,9 +58,9 @@ def test_binds():
     assert a.input.input == graph.Node.label.bindings[0].input.input
 
     e = graph.Node.edges.id.bindings[0]
-    assert isinstance(e.input, need.Each)
-    assert isinstance(e.input.input, need.Sep)
-    assert a.input.input == e.input.input.input.input
+    assert isinstance(e.input, need.Part[need.Each])
+    assert isinstance(e.input.input.input, need.Sep)
+    assert a.input.input == e.input.input.input.input.input
 
     assert isinstance(a.input.input.input, need.Sep)
 

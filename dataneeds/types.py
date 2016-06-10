@@ -12,14 +12,13 @@ class Type(OwningDescriptor, Binds):
 
     @property
     def __of__(self):
-        name = type(self).__name__
-        raise NotImplementedError("__of__ on %s" % name)
+        raise NotImplementedError("__of__ on %s" % type(self).__name__)
 
     def __add__(self, other):
         return Cons(self, other)
 
-    def __and__(self, other):
-        return All(self, other)
+    def __truediv__(self, other):
+        return Same(self, other)
 
     def __or__(self, other):
         return Either(self, other)
@@ -78,11 +77,14 @@ class Optional(Type):
         self.inner = inner
 
 
-class All(Type):
+class Same(Type):
 
     def __init__(self, *types):
         super().__init__()
         self.types = types
+
+    def __truediv__(self, other):
+        return Same(*(self.types + (other,)))
 
     def __bind__(self, input):
         for typ in self.types:
@@ -109,7 +111,7 @@ class Cons(Type):
 
     def __bind__(self, input):
         for i, typ in enumerate(self.types):
-            Part(self, i) >> typ
+            Part[Cons](self, i) >> typ
 
     def __repr__(self):
         return 'Cons({})'.format(', '.join(map(str, self.types)))
@@ -201,12 +203,24 @@ class Set(Type):
     # TODO Bounds
 
 
-class Dict(Type):
+class Dict(NativeType):
+    # __native__ = dict
+
+    @property
+    def __native__(self):
+        kof = self.keys.__of__
+        vof = self.values.__of__
+
+        def dct(input):
+            return {kof(k): vof(v) for k, v in dict(input).items()}
+
+        return dct
 
     def __init__(self, keys: Type, values: Type):
         super().__init__()
         self.keys = keys
         self.values = values
+
     # TODO key/value specs ...
 
 

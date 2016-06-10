@@ -61,7 +61,22 @@ class Binds:
         return Bundle(input, self) if res is None else res
 
 
-class Part(Binds):
+class PartMeta(type):
+
+    def __init__(cls, name, bases, attrs, **kwargs):
+        cls.types = weakref.WeakKeyDictionary()
+        return super().__init__(name, bases, attrs, **kwargs)
+
+    def __getitem__(cls, sub):
+        try:
+            return cls.types[sub]
+        except KeyError:
+            new = type('Part[%s]' % sub.__name__, (cls,), {})
+            cls.types[sub] = new
+            return new
+
+
+class Part(Binds, metaclass=PartMeta):
 
     def __init__(self, outer, id):
         self.input = outer
