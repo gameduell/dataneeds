@@ -1,4 +1,5 @@
 import operator
+from collections import defaultdict
 
 import toolz
 
@@ -26,10 +27,6 @@ class Context:
 
     def __init__(self, impls):
         self.impls = impls
-        self.returns = []
-        self.explode = None
-        self.explodes = {}
-
         self.bags = {}
 
     def __getitem__(self, node):
@@ -40,48 +37,48 @@ class Context:
 
     def mk_bag(self, node):
         bag = self.impls[type(node)](self, node)
-
-        explode = self.explodes.get(node)
-        if explode:
-            bag = db.zip(explode, bag).map(lambda n, i: [i] * n).concat()
-            self.explode = explode
-
-        self.explodes[node] = self.explode
         return bag
-
-    def add_explode(self, expl):
-        self.explode = expl.map(len)
-        self.returns = [(db
-                         .zip(self.explode, it)
-                         .map(lambda n, i: [i] * n)
-                         .concat()) for it in self.returns]
 
 
 class InnerBag:
 
-    def __init__(self, outer):
+    def __init__(self, outer, ancher=None):
         self.outer = outer
+        self.ancher = ancher or outer
 
     def map(self, f, **kws):
         f = toolz.curry(f, **kws)
-        return InnerBag(self.outer.map(lambda inner: map(f, inner)))
+        return InnerBag(self.outer.map(lambda inner: map(f, inner)),
+                        self.ancher)
 
 
 class DaskBagEngine:
 
-    def resolve(self, returns, primary, joins={}):
+    def resolve(self, items, primary, joins={}):
         ctx = Context(self.impls)
-
+        returns = []
         rix = {}
 
         for i, p in enumerate(primary):
             bag = ctx[p.binds]
-            if hasattr(bag, 'outer'):
-                bag = bag.outer
-            ctx.returns.append(bag)
+
+            returns.append(bag)
             rix[p.binds.general] = 0, i
 
-        base = db.zip(*ctx.returns)
+        exps = defaultdict(set)
+
+        for r in returns:
+            if isinstance(r, InnerBag):
+                exps[r.ancher].add(r)
+
+        for a, bs in exps.items():
+            exp = a.map(len)
+
+            returns = [(db.zip(exp, r).map(lambda n, c: [c] * n)
+                        if r not in bs else r.outer).concat()
+                       for r in returns]
+
+        base = db.zip(*returns)
 
         if joins:
             base = base.map(lambda x: (x,))
@@ -106,27 +103,24 @@ class DaskBagEngine:
                     .filter(fltr(i))
                     .map(fltn()))
 
-        ri = [rix[r.item.general] for r in returns]
+        ri = [rix[i.item.general] for i in items]
 
         return base.map(lambda ii: tuple(ii[n][m] for n, m in ri))
-
-        for p in primary:
-            bag = ctx[p.binds]
-
-        return db.zip(*ctx.returns)
 
     impls = Impls()
 
     @impls
     def each(ctx, each: need.Each):
-        return ctx[each.inner].outer
+        bag = ctx[each.inner]
+        if isinstance(bag, InnerBag):
+            return bag.outer
+        else:
+            return bag
 
     @impls
     def each_part(ctx, part: need.Part[need.Each]):
         each = part.input
         return InnerBag(ctx[each.input])
-        # ctx.add_explode(ctx[each.input])
-        # return ctx[each.input].concat()
 
     @impls
     def files(ctx, files: need.Files):

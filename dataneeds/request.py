@@ -44,10 +44,8 @@ class Request:
                            if len(bs) == len(bindings))
 
     def resolve_primary(self):
-        its = set()
-        ps = [its.add(it.primary) or it.primary
-              for it in self.items if it.primary not in its]
-        return self.resolve_bindings(ps)
+        ps = OrderedDict([(it.primary, it) for it in self.items])
+        return self.resolve_bindings(ps.keys())
 
     def resolve_joins(self):
         joins = defaultdict(list)

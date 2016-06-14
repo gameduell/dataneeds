@@ -63,7 +63,12 @@ class Attribute(Owned, Type):
 
 
 class Any(Type):
-    pass
+
+    @property
+    def __of__(self):
+        def id(ins):
+            return ins
+        return id
 
 
 class Unknown(Type):
@@ -203,11 +208,10 @@ class Set(Type):
     # TODO Bounds
 
 
-class Dict(NativeType):
-    # __native__ = dict
+class Dict(Type):
 
     @property
-    def __native__(self):
+    def __of__(self):
         kof = self.keys.__of__
         vof = self.values.__of__
 
@@ -220,8 +224,6 @@ class Dict(NativeType):
         super().__init__()
         self.keys = keys
         self.values = values
-
-    # TODO key/value specs ...
 
 
 class Categorical(Type):

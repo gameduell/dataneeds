@@ -87,8 +87,31 @@ def test_resolve_join():
 
     r, js = lookup[elf, nlf, nlf]
 
-    for r, js in lookup.values():
-        assert bag.compute(get=get_sync) == expect
+    for fs, (r, js) in lookup.items():
+        bag = e.resolve(E.items, r, js)
+        assert bag.compute(get=get_sync) == expect, "Edge-join for %s" % (fs,)
+
+    with need.request(graph.Node()) as N:
+        N.label, N.edges.weight
+
+    lookup = {(s.pattern, j.pattern): rr
+              for (s, j), rr in N.resolve_combined().items()}
+
+    assert set(lookup.keys()) == {(nlf, elf), (nlf, nef),
+                                  (nef, elf), (nef, nef)}
+
+    r, js = lookup[nef, nef]
+
+    e = need.engine.dask_bag.DaskBagEngine()
+    bag = e.resolve(N.items, r, js)
+    # expect = [('A', [.3, .2]), ('B', [.2, 1., .4]), ('C', [])]
+    expect = [('A', .3), ('A', .2), ('B', .2), ('B', 1.), ('B', .4)]
+
+    assert bag.compute(get=get_sync) == expect
+
+    for fs, (r, js) in lookup.items():
+        bag = e.resolve(N.items, r, js)
+        assert bag.compute(get=get_sync) == expect, "Node-join for %s" % (fs,)
 
 
 def test_resolve_join_same():
@@ -107,32 +130,3 @@ def test_resolve_join_same():
               (2, 1, 'B', 0.2), (3, 1, 'B', 1.0), (4, 1, 'B', 0.4)]
 
     assert bag.compute(get=get_sync) == expect
-
-
-def test_dict():
-
-    class Bar(need.Entity):
-        baz = need.Dict(keys=need.String(), values=need.Integer())
-
-    class BarSource:
-        B = Bar()
-
-        (need.Here("a: 42, b: 6, c: 23", "a: 12") >>
-         need.Sep(', ') >> need.Each(need.Sep(': ')) >>
-         B.baz)
-
-    with need.request(Bar()) as B:
-        B.baz
-
-    (r, js), *_ = B.resolve_combined().values()
-
-    e = need.engine.dask_bag.DaskBagEngine()
-    bag = e.resolve(B.items, r, js)
-    expect = [({'a': 42, 'b': 6, 'c': 23},), ({'a': 12},)]
-
-    assert bag.compute(get=get_sync) == expect
-
-    class Foo:
-        foo = need.String()
-        bar = need.Integer()
-        baz = need.Floating()
