@@ -7,3 +7,4 @@ from .formats import *
 from .api import request
 
 from . import engine
+from . import infer

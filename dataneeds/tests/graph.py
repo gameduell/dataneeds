@@ -23,34 +23,30 @@ class Edge(need.Entity):
         return Node()
 
 
-# Node List Format
-# id,label,edge-ids...
-# 0,A,0,1
-# 1,B,2,3,4
-# 2,C,
-
 class NodeListFormat(need.Source):
     N = Node()
 
-    (need.Files("dataneeds/tests/*.nlf") >>
+    # id,label,edge-ids...
+    (need.Here("0,A,0,1",
+               "1,B,2,3,4",
+               "2,C,",
+               name='nlf') >>
      need.Sep(',', 2) >>
      need.Cons(N.id,
                N.label,
                need.Sep(',') >> need.Each(N.edges.id)))
 
 
-# Edge List Format
-# id,weight,source,target
-# 0,.3,0,1
-# 1,.2,0,2
-# 2,.2,1,0
-# 3,1.,1,1
-# 4,.4,1,2
-
 class EdgeListFormat(need.Source):
     E = Edge()
 
-    (need.Files("dataneeds/tests/*.elf") >>
+    # id,weight,source,target
+    (need.Here("0,.3,0,1",
+               "1,.2,0,2",
+               "2,.2,1,0",
+               "3,1.,1,1",
+               "4,.4,1,2",
+               name='elf') >>
      need.Sep(',') >>
      need.Cons(E.id,
                E.weight,
@@ -58,17 +54,15 @@ class EdgeListFormat(need.Source):
                E.target.id))
 
 
-# Node Edge Format
-# node-id,laebl,edge-id:weight:target-id,...
-# 0,A,0:.3:1,1:.2:2
-# 1,B,2:.2:0,3:1.:1,4:.4:2
-# 2,C,
-
 class NodeEdgeFormat:
     N = Node()
     E = Edge()
 
-    (need.Files("dataneeds/tests/*.nef") >>
+    # node-id,laebl,edge-id:weight:target-id,...
+    (need.Here("0,A,0:.3:1,1:.2:2",
+               "1,B,2:.2:0,3:1.:1,4:.4:2",
+               "2,C,",
+               name='nef') >>
      need.Sep(',', 2) >>
      need.Cons(N.id / E.source.id,
                N.label,
@@ -77,3 +71,27 @@ class NodeEdgeFormat:
                        E.id / N.edges.id,
                        E.weight,
                        E.target.id))))
+
+
+class EdgeNodeFormat:
+    Ns = Node()
+    Nt = Node()
+    E = Edge()
+
+    (need.Here("0,.3,0,'A',1,'B'",
+               "1,.2,0,'A',2,'C'",
+               "2,.2,1,'B',0,'A'",
+               "3,1.,1,'B',1,'B'",
+               "4,.4,1,'B',2,'C'",
+               name='enf') >>
+     need.Sep(',') >>
+     need.Cons(E.id,
+               E.weight,
+
+               E.source.id /
+               Ns.id,
+               need.infer.Any() >> Ns.label,
+
+               E.target.id /
+               Nt.id,
+               need.infer.Any() >> Nt.label))

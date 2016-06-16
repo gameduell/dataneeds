@@ -117,5 +117,6 @@ class Files(Format):
 
 class Here(Format):
 
-    def __init__(self, *content):
+    def __init__(self, *content, name=None):
+        self.name = name
         self.content = content

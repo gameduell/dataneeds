@@ -1,4 +1,5 @@
 import dataneeds as need
+import dataneeds.engine.dask_bag
 from dask.async import get_sync
 
 
@@ -10,7 +11,8 @@ def test_dict():
     class BarSource:
         B = Bar()
 
-        (need.Here("a: 42, b: 6, c: 23", "a: 12") >>
+        (need.Here("a: 42, b: 6, c: 23",
+                   "a: 12") >>
          need.Sep(', ') >> need.Each(need.Sep(': ')) >>
          B.baz)
 
@@ -19,7 +21,7 @@ def test_dict():
 
     (r, js), *_ = B.resolve_combined().values()
 
-    e = need.engine.dask_bag.DaskBagEngine()
+    e = dataneeds.engine.dask_bag.DaskBagEngine()
     bag = e.resolve(B.items, r, js)
     expect = [({'a': 42, 'b': 6, 'c': 23},), ({'a': 12},)]
 
