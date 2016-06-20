@@ -88,10 +88,8 @@ class EdgeNodeFormat:
      need.Cons(E.id,
                E.weight,
 
-               E.source.id /
-               Ns.id,
+               E.source.id / Ns.id,
                need.infer.Any() >> Ns.label,
 
-               E.target.id /
-               Nt.id,
+               E.target.id / Nt.id,
                need.infer.Any() >> Nt.label))

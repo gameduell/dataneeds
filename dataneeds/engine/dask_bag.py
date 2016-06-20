@@ -20,7 +20,10 @@ class Impls:
         self.impls[typ] = method
 
     def __getitem__(self, typ):
-        return self.impls[typ]
+        try:
+            return self.impls[typ]
+        except KeyError as e:
+            raise NotImplementedError("%s" % typ) from e
 
 
 class Context:
@@ -154,3 +157,7 @@ class DaskBagEngine:
     @impls
     def reference(ctx, ref: Reference):
         return ctx[ref.input].map(ref.attr.typ.__of__)
+
+    @impls
+    def highest(ctx, high: need.infer.Highest):
+        pass

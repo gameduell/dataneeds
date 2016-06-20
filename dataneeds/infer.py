@@ -7,16 +7,24 @@ class Rule(Binds):
         pass
 
 
+class By(Rule):
+    pass
+
+
 class Any(Rule):
     pass
 
 
 class Lowest(Rule):
-    pass
+
+    def __init__(self, range=None):
+        self.range = None
 
 
 class Highest(Rule):
-    pass
+
+    def __init__(self, range=None):
+        self.range = None
 
 
 class AtMost(Rule):

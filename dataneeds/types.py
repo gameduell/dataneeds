@@ -153,6 +153,10 @@ class NativeType(Type):
         return self.__native__
 
 
+class Boolean(NativeType):
+    __native__ = bool
+
+
 class Integer(NativeType):
     __native__ = int
 
