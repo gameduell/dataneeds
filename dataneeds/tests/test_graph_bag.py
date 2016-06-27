@@ -22,7 +22,8 @@ def test_execute():
     with need.request(graph.Edge()) as E:
         E.source.id, E.target.id, E.weight
 
-    r1, r2, r3 = E.resolve_primary().values()
+    # r1, r2, r3 = E.resolve_primary().values()
+    r1, r2 = E.resolve_primary().values()
 
     bag = e.resolve(E.items, r1)
     expect = [(0, 1, 0.3), (0, 2, 0.2),
@@ -32,8 +33,8 @@ def test_execute():
     bag = e.resolve(E.items, r2)
     assert bag.compute(get=get_sync) == expect
 
-    bag = e.resolve(E.items, r3)
-    assert bag.compute(get=get_sync) == expect
+    # bag = e.resolve(E.items, r3)
+    # assert bag.compute(get=get_sync) == expect
 
 
 def test_resolve_join():
@@ -41,16 +42,17 @@ def test_resolve_join():
         E.source.label, E.target.label, E.weight
 
     ps = E.resolve_primary()
-    assert(len(ps) == 3)
+    assert len(ps) == 2
 
-    p1, p2, p3 = ps.values()
+    # p1, p2, p3 = ps.values()
+    p1, p2 = ps.values()
     assert p1[0].binds.general == graph.Edge.source.id
     assert p1[1].binds.general == graph.Edge.target.id
     assert p1[2].binds.general == graph.Edge.weight
 
     joins = E.resolve_joins()
 
-    assert len(joins) == 6
+    assert len(joins) == 4
 
     assert all(len(js) == 2 for js in joins.values())
     assert all(len(js) == 2 for js in joins.values())
@@ -62,7 +64,7 @@ def test_resolve_join():
 
     rs = E.resolve_combined()
 
-    assert len(rs) == 12
+    assert len(rs) == 8
 
     lookup = {(s.name, ja.name, jb.name): rr
               for (s, ja, jb), rr in rs.items()}
@@ -74,11 +76,11 @@ def test_resolve_join():
                                   ('nef', 'nlf', 'nlf'),
                                   ('nef', 'nlf', 'nef'),
                                   ('nef', 'nef', 'nlf'),
-                                  ('nef', 'nef', 'nef'),
-                                  ('enf', 'nef', 'nlf'),
-                                  ('enf', 'nlf', 'nlf'),
-                                  ('enf', 'nef', 'nef'),
-                                  ('enf', 'nlf', 'nef'), }
+                                  ('nef', 'nef', 'nef'), }
+    # ('enf', 'nef', 'nlf'),
+    # ('enf', 'nlf', 'nlf'),
+    # ('enf', 'nef', 'nef'),
+    # ('enf', 'nlf', 'nef'), }
 
     r, js = lookup['elf', 'nlf', 'nlf']
 
@@ -103,8 +105,8 @@ def test_resolve_join():
               for k, rr in N.resolve_combined().items() if len(k) == 2}
 
     assert set(lookup.keys()) == {('nlf', 'elf'), ('nlf', 'nef'),
-                                  ('nef', 'elf'), ('nef', 'nef'),
-                                  ('nlf', 'enf'), ('nef', 'enf'), }
+                                  ('nef', 'elf'), ('nef', 'nef'), }
+    # ('nlf', 'enf'), ('nef', 'enf'), }
 
     r, js = lookup['nef', 'nef']
 
@@ -125,7 +127,7 @@ def test_resolve_join_same():
         E.id, E.source.id, E.source.label, E.weight
 
     rs = E.resolve_combined()
-    assert len(rs) == 6
+    assert len(rs) == 4
 
     (r, js), *_ = rs.values()
 

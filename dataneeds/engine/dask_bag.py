@@ -57,8 +57,9 @@ class InnerBag:
 
 class DaskBagEngine:
 
-    def resolve(self, items, primary, joins={}):
-        ctx = Context(self.impls)
+    @classmethod
+    def resolve(cls, items, primary, joins={}):
+        ctx = Context(cls.impls)
         returns = []
         rix = {}
 
@@ -92,7 +93,7 @@ class DaskBagEngine:
             for m, k in enumerate(ks):
                 rix[k.item.general] = n + 1, m + 1
 
-            add = self.resolve(None, js)
+            add = cls.resolve(None, js)
 
             def fltr(i):
                 return lambda ii: ii[0][0][i] == ii[1][0]
@@ -136,6 +137,15 @@ class DaskBagEngine:
         return db.from_sequence(here.content)
 
     @impls
+    def json(ctx, json: need.Json):
+        try:
+            import ujson as js
+        except ImportError:
+            import js
+
+        return ctx[json.input].map(js.loads)
+
+    @impls
     def sep(ctx, sep: need.Sep):
         return (ctx[sep.input]
                 .map(str.split, sep=sep.sep, maxsplit=sep.limit)
@@ -145,6 +155,11 @@ class DaskBagEngine:
     def cons(ctx, part: need.Part[need.Cons]):
         cons = part.input
         return ctx[cons.input].map(operator.itemgetter(part.id))
+
+    @impls
+    def named(ctx, part: need.Part[need.Named]):
+        named = part.input
+        return ctx[named.input].map(operator.itemgetter(part.id))
 
     @impls
     def both(ctx, both: need.Same):
@@ -161,3 +176,5 @@ class DaskBagEngine:
     @impls
     def highest(ctx, high: need.infer.Highest):
         pass
+
+resolve = DaskBagEngine.resolve

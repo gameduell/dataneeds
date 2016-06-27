@@ -97,6 +97,7 @@ class Same(Type):
 
 
 class Cons(Type):
+    # XXX Cons should be a format as arg should be formats
 
     def __init__(self, *types):
         super().__init__()
@@ -120,6 +121,23 @@ class Cons(Type):
 
     def __repr__(self):
         return 'Cons({})'.format(', '.join(map(str, self.types)))
+
+
+class Named(Type):
+    # XXX Named should be a format as arg should be formats
+
+    def __init__(self, *named, **kws):
+        kws.update({n.name: n for n in named})
+        self.formats = kws
+
+    def __bind__(self, input):
+        for n, fmt in self.formats.items():
+            Part[Named](self, n) >> fmt
+
+    def __repr__(self):
+        return 'Named({kws})'.format(
+            kws=', '.join(['{}={}'.format(n, fmt)
+                           for n, fmt in self.formats.items()]))
 
 
 class Either(Type):

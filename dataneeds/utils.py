@@ -53,3 +53,18 @@ class Owned:
     @property
     def owned(self):
         return self.instance or self.owner
+
+
+class Wraps:
+
+    def __init__(self, wrapped, *args, **kws):
+        super().__init__(*args, **kws)
+        self.wrapped = wrapped
+
+    def __wrap__(self, field):
+        raise AttributeError("%s is not forwarding a %s attribute." %
+                             (type(self).__name__, type(field).__name__))
+
+    def __getattr__(self, name):
+        field = getattr(self.wrapped, name)
+        return self.__wrap__(field)

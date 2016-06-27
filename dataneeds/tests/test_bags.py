@@ -31,3 +31,35 @@ def test_dict():
         foo = need.String()
         bar = need.Integer()
         baz = need.Floating()
+
+
+def test_simple_json():
+    class Foo(need.Entity):
+        id = need.Integer()
+        bar = need.Boolean()
+        baz = need.String()
+
+    class FooFormat:
+        (need.Here('{"id": 0, "bar": true, "baz": "abc"}',
+                   '{"id": 1, "bar": true, "baz": "def"}',
+                   '{"id": 2, "bar": false, "baz": ""}',
+                   name="FooJson") >>
+         need.Json() >> Foo())
+
+    with need.request(Foo()) as F:
+        F.id, F.bar, F.baz
+
+    rs = F.resolve_primary()
+
+    assert len(rs) == 1
+
+    r, = rs.values()
+
+    import dataneeds.engine.dask_bag as eng
+
+    bag = eng.resolve(F.items, r)
+    assert bag
+
+    assert bag.compute(get=get_sync) == [(0, True, "abc"),
+                                         (1, True, "def"),
+                                         (2, False, "")]

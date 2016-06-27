@@ -41,9 +41,9 @@ def test_binds():
     assert graph.Node.label.bindings != graph.Node.id.bindings
     assert graph.Node.edges.id.bindings != graph.Node.id.bindings
 
-    assert len(graph.Node.id.bindings) == 4
+    assert len(graph.Node.id.bindings) == 2
     assert len(graph.Node.edges.id.bindings) == 2
-    assert len(graph.Edge.weight.bindings) == 3
+    assert len(graph.Edge.weight.bindings) == 2
 
     a, b, *_ = graph.Node.id.bindings
 
@@ -113,7 +113,7 @@ def test_resolve():
 
     rs = E.resolve_primary()
     assert all(len(r) == 4 for r in rs.values())
-    assert len(rs) == 3
+    assert len(rs) == 2
     assert E.resolve_joins() == {}
 
 
@@ -122,16 +122,17 @@ def test_resolve_join():
         E.source.label, E.target.label, E.weight
 
     ps = E.resolve_primary()
-    assert(len(ps) == 3)
+    assert(len(ps) == 2)
 
-    p1, p2, p3 = ps.values()
+    # p1, p2, p3 = ps.values()
+    p1, p2 = ps.values()
     assert p1[0].binds.general == graph.Edge.source.id
     assert p1[1].binds.general == graph.Edge.target.id
     assert p1[2].binds.general == graph.Edge.weight
 
     joins = E.resolve_joins()
 
-    assert len(joins) == 6
+    assert len(joins) == 4
 
     assert all(len(js) == 2 for js in joins.values())
     assert all(len(js) == 2 for js in joins.values())
@@ -143,7 +144,8 @@ def test_resolve_join():
 
     rs = E.resolve_combined()
 
-    assert len(rs) == 12
+    # assert len(rs) == 12
+    assert len(rs) == 8
 
     lookup = {(s.name, ja.name, jb.name): rr
               for (s, ja, jb), rr in rs.items()}
@@ -155,11 +157,11 @@ def test_resolve_join():
                                   ('nef', 'nlf', 'nlf'),
                                   ('nef', 'nlf', 'nef'),
                                   ('nef', 'nef', 'nlf'),
-                                  ('nef', 'nef', 'nef'),
-                                  ('enf', 'nef', 'nef'),
-                                  ('enf', 'nlf', 'nlf'),
-                                  ('enf', 'nef', 'nlf'),
-                                  ('enf', 'nlf', 'nef'), }
+                                  ('nef', 'nef', 'nef'), }
+    # ('enf', 'nef', 'nef'),
+    # ('enf', 'nlf', 'nlf'),
+    # ('enf', 'nef', 'nlf'),
+    # ('enf', 'nlf', 'nef'), }
 
     r, js = lookup['elf', 'nlf', 'nlf']
 
@@ -171,4 +173,5 @@ def test_resolve_join_same():
         E.id, E.source.id, E.source.label, E.weight
 
     rs = E.resolve_combined()
-    assert len(rs) == 6
+    # assert len(rs) == 6
+    assert len(rs) == 4

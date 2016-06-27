@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from .binds import Bindings
 from .entity import Reference, Relation
 from .types import Attribute
+from .utils import Wraps
 
 
 @contextlib.contextmanager
@@ -12,10 +13,10 @@ def request(entity, **options):
     yield Request(entity, **options)
 
 
-class Request:
+class Request(Wraps):
 
     def __init__(self, entity, **options):
-        self.entity = entity
+        super().__init__(entity)
         self.options = options
 
         self.items = []
@@ -78,15 +79,13 @@ class Request:
 
         return combine
 
-    def __getattr__(self, name):
-        field = getattr(self.entity, name)
-
+    def __wrap__(self, field):
         if isinstance(field, Attribute):
             item = AttrItem(self, field)
         elif isinstance(field, Relation):
             item = RelationItem(self, field)
         else:
-            raise ValueError("Don't know how to request a %r" % type(field))
+            return super().__wrap__(field)
 
         return self.returning(None, item)
 
@@ -122,21 +121,19 @@ class AttrItem(Item):
         super().__init__(request, attr)
 
 
-class RelationItem(Item):
+class RelationItem(Wraps, Item):
 
     def __init__(self, request, rel):
-        super().__init__(request, rel)
+        super().__init__(rel, request, rel)
         self.items = []
 
-    def __getattr__(self, name):
-        ref = getattr(self.item, name)
-        if isinstance(ref, Reference):
-            item = ReferenceItem(self.request, ref, self)
-        elif isinstance(ref, Relation):
-            item = RelationItem(self.request, ref)
+    def __wrap__(self, field):
+        if isinstance(field, Reference):
+            item = ReferenceItem(self.request, field, self)
+        elif isinstance(field, Relation):
+            item = RelationItem(self.request, field)
         else:
-            raise AttributeError('No request to {} ({}) through relations'
-                                 .format(name, type(ref)))
+            return super().__wrap__()
 
         return self.request.returning(self, item)
 

@@ -73,23 +73,25 @@ class NodeEdgeFormat:
                        E.target.id))))
 
 
-class EdgeNodeFormat:
-    Ns = Node()
-    Nt = Node()
-    E = Edge()
-
-    (need.Here("0,.3,0,'A',1,'B'",
-               "1,.2,0,'A',2,'C'",
-               "2,.2,1,'B',0,'A'",
-               "3,1.,1,'B',1,'B'",
-               "4,.4,1,'B',2,'C'",
-               name='enf') >>
-     need.Sep(',') >>
-     need.Cons(E.id,
-               E.weight,
-
-               E.source.id / Ns.id,
-               need.infer.Any() >> Ns.label,
-
-               E.target.id / Nt.id,
-               need.infer.Any() >> Nt.label))
+# class EdgeNodeFormat:
+#     E = Edge()
+#     N = Node()
+#
+#     Ns = need.inferring(N)
+#     Nt = need.inferring(N)
+#
+#     (need.Here("0,.3,0,'A',1,'B'",
+#                "1,.2,0,'A',2,'C'",
+#                "2,.2,1,'B',0,'A'",
+#                "3,1.,1,'B',1,'B'",
+#                "4,.4,1,'B',2,'C'",
+#                name='enf') >>
+#      need.Sep(',') >>
+#      need.Cons(E.id,
+#                E.weight,
+#
+#                E.source.id / Ns.id,
+#                need.infer.Any() >> Ns.label,
+#
+#                E.target.id / Nt.id,
+#                need.infer.Any() >> Nt.label))

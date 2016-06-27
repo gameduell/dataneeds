@@ -97,6 +97,12 @@ class Json(Format):
     def __out__(self):
         return ...
 
+    def __str__(self):
+        return "json"
+
+    def __repr__(self):
+        return "Json()"
+
 
 class Files(Format):
 
@@ -120,3 +126,7 @@ class Here(Format):
     def __init__(self, *content, name=None):
         self.name = name
         self.content = content
+
+    def __str__(self):
+        return "{type}({name})".format(type=type(self).__name__,
+                                       name=self.name)

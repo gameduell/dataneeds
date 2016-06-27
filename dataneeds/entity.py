@@ -1,5 +1,5 @@
 from .binds import BindingsDescriptor, Binds
-from .types import Attribute, Type
+from .types import Attribute, Named, Type
 from .utils import Owned, OwningDescriptor
 
 __all__ = ['Entity']
@@ -23,7 +23,7 @@ class EntityMeta(type):
             return cls.__module__ + "." + cls.__name__
 
 
-class Entity(OwningDescriptor, metaclass=EntityMeta):
+class Entity(OwningDescriptor, Binds, metaclass=EntityMeta):
     """
     Base class for entity definitions.
 
@@ -33,6 +33,25 @@ class Entity(OwningDescriptor, metaclass=EntityMeta):
 
     def __init__(self):
         super().__init__()
+
+    @property
+    def attributes(self):
+        cls = type(self)
+        for name in dir(cls):
+            attr = getattr(self, name)
+            if isinstance(attr, Attribute):
+                yield attr
+
+    @property
+    def relations(self):
+        cls = type(self)
+        for name in dir(cls):
+            attr = getattr(self, name)
+            if isinstance(attr, Relation):
+                yield attr
+
+    def __bind__(self, input):
+        input >> Named(*(list(self.attributes) + list(self.relations)))
 
     def __owned__(self, name, instance, owner):
         """An Entity is a Relation when being part of another Entity."""
