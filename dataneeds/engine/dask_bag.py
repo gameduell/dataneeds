@@ -1,4 +1,3 @@
-import operator
 from collections import defaultdict
 
 import toolz
@@ -154,12 +153,12 @@ class DaskBagEngine:
     @impls
     def cons(ctx, part: need.Part[need.Cons]):
         cons = part.input
-        return ctx[cons.input].map(operator.itemgetter(part.id))
+        return ctx[cons.input].pluck(part.id)
 
     @impls
     def named(ctx, part: need.Part[need.Named]):
         named = part.input
-        return ctx[named.input].map(operator.itemgetter(part.id))
+        return ctx[named.input].pluck(part.id)
 
     @impls
     def both(ctx, both: need.Same):
